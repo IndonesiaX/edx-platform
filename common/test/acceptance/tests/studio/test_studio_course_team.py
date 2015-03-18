@@ -38,6 +38,7 @@ class CourseTeamPageTest(StudioCourseTest):
         self.page = CourseTeamPage(  # pylint:disable=attribute-defined-outside-init
             self.browser, self.course_info['org'], self.course_info['number'], self.course_info['run']
         )
+        self.get_sudo_access(self.page, self.user.get('password'))
         self._go_to_course_team_page()
 
     def _go_to_course_team_page(self):
@@ -125,6 +126,7 @@ class CourseTeamPageTest(StudioCourseTest):
         self.page.add_user_to_course(self.other_user.get('email'))
         self._assert_user_present(self.other_user, present=True)
         self.log_in(self.other_user)
+        self.get_sudo_access(self.page, self.other_user.get('password'))
         self._assert_current_course(visible=True)
 
     @flaky  # TODO fix this, see TNL-2667
@@ -143,6 +145,7 @@ class CourseTeamPageTest(StudioCourseTest):
         self._assert_user_present(self.other_user, present=True)
 
         self.log_in(self.other_user)
+        self.get_sudo_access(self.page, self.other_user.get('password'))
         self._assert_current_course(visible=True)
         self._go_to_course_team_page()
 
@@ -204,6 +207,7 @@ class CourseTeamPageTest(StudioCourseTest):
         self._assert_is_admin(other)
 
         self.log_in(self.other_user)
+        self.get_sudo_access(self.page, self.other_user.get('password'))
         self._go_to_course_team_page()
         other = self.page.get_user(self.other_user.get('email'))
         self.assertTrue(other.is_current_user)
@@ -235,12 +239,14 @@ class CourseTeamPageTest(StudioCourseTest):
 
         # precondition check - frank is an admin and can add/delete/promote/demote users
         self.log_in(self.other_user)
+        self.get_sudo_access(self.page, self.other_user.get('password'))
         self._go_to_course_team_page()
         other = self.page.get_user(self.other_user.get('email'))
         self.assertTrue(other.is_current_user)
         self._assert_can_manage_users()
 
         self.log_in(self.user)
+        self.get_sudo_access(self.page, self.user.get('password'))
         self._go_to_course_team_page()
         other = self.page.get_user(self.other_user.get('email'))
         other.click_demote()
@@ -249,6 +255,7 @@ class CourseTeamPageTest(StudioCourseTest):
         self._assert_is_staff(other)
 
         self.log_in(self.other_user)
+        self.get_sudo_access(self.page, self.other_user.get('password'))
         self._go_to_course_team_page()
         other = self.page.get_user(self.other_user.get('email'))
         self.assertTrue(other.is_current_user)
@@ -334,6 +341,7 @@ class CourseTeamPageTest(StudioCourseTest):
         self.assertFalse(current.can_promote)
 
         self.log_in(self.other_user)
+        self.get_sudo_access(self.page, self.other_user.get('password'))
         self._go_to_course_team_page()
 
         current = self.page.get_user(self.user.get('email'))
