@@ -222,6 +222,7 @@ class ThreadViewSetListTest(DiscussionAPIViewTestMixin, ModuleStoreTestCase):
             }
         )
         self.assert_last_query_params({
+            "user_id": [unicode(self.user.id)],
             "course_id": [unicode(self.course.id)],
             "sort_key": ["date"],
             "sort_order": ["desc"],
@@ -243,6 +244,7 @@ class ThreadViewSetListTest(DiscussionAPIViewTestMixin, ModuleStoreTestCase):
             {"developer_message": "Not found."}
         )
         self.assert_last_query_params({
+            "user_id": [unicode(self.user.id)],
             "course_id": [unicode(self.course.id)],
             "sort_key": ["date"],
             "sort_order": ["desc"],
@@ -264,6 +266,7 @@ class ThreadViewSetListTest(DiscussionAPIViewTestMixin, ModuleStoreTestCase):
             {"results": [], "next": None, "previous": None, "text_search_rewrite": None}
         )
         self.assert_last_query_params({
+            "user_id": [unicode(self.user.id)],
             "course_id": [unicode(self.course.id)],
             "sort_key": ["date"],
             "sort_order": ["desc"],

@@ -521,6 +521,7 @@ class GetThreadListTest(CommentsServiceMockMixin, UrlResetMixin, ModuleStoreTest
         self.get_thread_list([], topic_id_list=["topic_x", "topic_meow"])
         self.assertEqual(urlparse(httpretty.last_request().path).path, "/api/v1/threads")
         self.assert_last_query_params({
+            "user_id": [unicode(self.user.id)],
             "course_id": [unicode(self.course.id)],
             "sort_key": ["date"],
             "sort_order": ["desc"],
@@ -533,6 +534,7 @@ class GetThreadListTest(CommentsServiceMockMixin, UrlResetMixin, ModuleStoreTest
     def test_basic_query_params(self):
         self.get_thread_list([], page=6, page_size=14)
         self.assert_last_query_params({
+            "user_id": [unicode(self.user.id)],
             "course_id": [unicode(self.course.id)],
             "sort_key": ["date"],
             "sort_order": ["desc"],
@@ -735,6 +737,7 @@ class GetThreadListTest(CommentsServiceMockMixin, UrlResetMixin, ModuleStoreTest
             }
         )
         self.assert_last_query_params({
+            "user_id": [unicode(self.user.id)],
             "course_id": [unicode(self.course.id)],
             "sort_key": ["date"],
             "sort_order": ["desc"],
@@ -762,6 +765,7 @@ class GetThreadListTest(CommentsServiceMockMixin, UrlResetMixin, ModuleStoreTest
             "/api/v1/users/{}/subscribed_threads".format(self.user.id)
         )
         self.assert_last_query_params({
+            "user_id": [unicode(self.user.id)],
             "course_id": [unicode(self.course.id)],
             "sort_key": ["date"],
             "sort_order": ["desc"],
