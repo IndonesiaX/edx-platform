@@ -2,16 +2,34 @@
 Tests for users API
 """
 import datetime
+import ddt
+from django.conf import settings
 from django.utils import timezone
+from django.template import defaultfilters
+from mock import patch
+import pytz
 
 from xmodule.modulestore.tests.factories import ItemFactory, CourseFactory
 from student.models import CourseEnrollment
 from certificates.models import CertificateStatuses
 from certificates.tests.factories import GeneratedCertificateFactory
+from courseware.access_response import (
+    MilestoneError,
+    StartDateError,
+    VisibilityError,
+)
+from xmodule.course_module import DEFAULT_START_DATE
 
 from .. import errors
 from ..testutils import MobileAPITestCase, MobileAuthTestMixin, MobileAuthUserTestMixin, MobileCourseAccessTestMixin
 from .serializers import CourseEnrollmentSerializer
+
+from util.milestones_helpers import (
+    set_prerequisite_courses,
+    seed_milestone_relationship_types,
+)
+
+# pylint: disable=no-member
 
 
 class TestUserDetailApi(MobileAPITestCase, MobileAuthUserTestMixin):
@@ -42,7 +60,7 @@ class TestUserInfoApi(MobileAPITestCase, MobileAuthTestMixin):
         response = self.api_response(expected_response_code=302)
         self.assertTrue(self.username in response['location'])
 
-
+@ddt.ddt
 class TestUserEnrollmentApi(MobileAPITestCase, MobileAuthUserTestMixin, MobileCourseAccessTestMixin):
     """
     Tests for /api/mobile/v0.5/users/<user_name>/course_enrollments/
@@ -50,6 +68,9 @@ class TestUserEnrollmentApi(MobileAPITestCase, MobileAuthUserTestMixin, MobileCo
     REVERSE_INFO = {'name': 'courseenrollment-detail', 'params': ['username']}
     ALLOW_ACCESS_TO_UNRELEASED_COURSE = True
     ALLOW_ACCESS_TO_MILESTONE_COURSE = True
+    TOMORROW = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
+    YESTERDAY = datetime.datetime.now(pytz.UTC) - datetime.timedelta(days=1)
+    ADVERTISED_START = "Spring 2016"
 
     def verify_success(self, response):
         super(TestUserEnrollmentApi, self).verify_success(response)
@@ -81,9 +102,64 @@ class TestUserEnrollmentApi(MobileAPITestCase, MobileAuthUserTestMixin, MobileCo
         response = self.api_response()
         for course_num in range(num_courses):
             self.assertEqual(
-                response.data[course_num]['course']['id'],  # pylint: disable=no-member
+                response.data[course_num]['course']['id'],
                 unicode(courses[num_courses - course_num - 1].id)
             )
+
+    @patch.dict(settings.FEATURES, {'ENABLE_PREREQUISITE_COURSES': True, 'MILESTONES_APP': True,
+                                    'DISABLE_START_DATES': False})
+    def test_courseware_access(self):
+        seed_milestone_relationship_types()
+        self.login()
+
+        course = CourseFactory.create(start=self.YESTERDAY, mobile_available=True)
+        prerequisite_course = CourseFactory.create()
+        set_prerequisite_courses(course.id, [unicode(prerequisite_course.id)])
+
+        # Create list of courses with various expected courseware_access responses and corresponding expected codes
+        courses = [course,
+                   CourseFactory.create(start=self.TOMORROW, mobile_available=True),
+                   CourseFactory.create(visible_to_staff_only=True, mobile_available=True),
+                   CourseFactory.create(start=self.YESTERDAY, mobile_available=True, visible_to_staff_only=False)]
+
+        expected_error_codes = [MilestoneError().error_code,  # 'unfulfilled_milestones'
+                                StartDateError(None).error_code,  # 'course_not_started'
+                                VisibilityError().error_code,  # 'not_visible_to_user'
+                                None]
+
+        # Enroll in all the courses
+        for course_num in range(len(courses)):
+            self.enroll(courses[course_num].id)
+
+        # Verify courses have the correct response through error code. Last enrolled course is first course in response
+        response = self.api_response()
+        for course_num in range(len(courses)):
+            result = response.data[course_num]['course']['courseware_access']  # pylint: disable=no-member
+            self.assertEqual(result['error_code'], expected_error_codes[::-1][course_num])
+
+            if result['error_code'] is not None:
+                self.assertFalse(result['has_access'])
+
+    @ddt.data(
+        (TOMORROW, ADVERTISED_START, ADVERTISED_START, "String"),
+        (TOMORROW, None, defaultfilters.date(TOMORROW, "DATE_FORMAT"), "Timestamp"),
+        (DEFAULT_START_DATE, ADVERTISED_START, ADVERTISED_START, "String"),
+        (DEFAULT_START_DATE, None, None, "Empty")
+    )
+    @ddt.unpack
+    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
+    def test_start_type_and_display(self, start, advertised_start, expected_display, expected_type):
+        """
+        Tests that the correct start_type and start_display are returned in the case the course has not started
+        """
+        seed_milestone_relationship_types()
+        self.login()
+        course = CourseFactory.create(start=start, advertised_start=advertised_start, mobile_available=True)
+        self.enroll(course.id)
+
+        response = self.api_response()
+        self.assertEqual(response.data[0]['course']['start_type'], expected_type)
+        self.assertEqual(response.data[0]['course']['start_display'], expected_display)
 
     def test_no_certificate(self):
         self.login_and_enroll()
