@@ -18,6 +18,7 @@
          * done.
          */
         modules: getModulesList([
+            'js/student_account/views/finish_auth_factory',
             'teams/js/teams_tab_factory'
         ]),
 
