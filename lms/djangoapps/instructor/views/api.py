@@ -2191,6 +2191,7 @@ def calculate_grades_csv(request, course_id):
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
+@sudo_required
 def problem_grade_report(request, course_id):
     """
     Request a CSV showing students' grades for all problems in the
