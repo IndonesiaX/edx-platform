@@ -7,9 +7,9 @@
                     PagingCollection.prototype.initialize.call(this);
 
                     this.course_id = options.course_id;
-                    this.perPage = teams.results.length;
+                    this.perPage = options.per_page;
                     this.server_api['course_id'] = function () { return encodeURIComponent(this.course_id); };
-                    this.server_api['order_by'] = function () { return this.sortField; };
+                    this.server_api['order_by'] = function () { return 'name'; }; // TODO surface sort order in UI
                     delete this.server_api['sort_order']; // Sort order is not specified for the Team API
 
                     // TODO: sort by last activity
