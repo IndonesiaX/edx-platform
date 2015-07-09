@@ -17,7 +17,7 @@ from edx_user_state_client.interface import XBlockUserStateClient
 from courseware.models import StudentModule, StudentModuleHistory
 from contracts import contract, new_contract
 from opaque_keys.edx.keys import UsageKey
-
+from openedx.core.djangoapps.call_stack_manager.core import donottrack
 new_contract('UsageKey', UsageKey)
 
 
@@ -53,12 +53,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
         """
         self.user = user
 
-    @contract(
-        username="basestring",
-        block_key=UsageKey,
-        scope=ScopeBase,
-        fields="seq(basestring)|set(basestring)|None"
-    )
+    @donottrack(StudentModule, StudentModuleHistory)
     def get(self, username, block_key, scope=Scope.user_state, fields=None):
         """
         Retrieve the stored XBlock state for a single xblock usage.
@@ -82,7 +77,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
 
         return state
 
-    @contract(username="basestring", block_key=UsageKey, state="dict(basestring: *)", scope=ScopeBase)
+    @donottrack(StudentModule, StudentModuleHistory)
     def set(self, username, block_key, state, scope=Scope.user_state):
         """
         Set fields for a particular XBlock.
@@ -95,12 +90,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
         """
         self.set_many(username, {block_key: state}, scope)
 
-    @contract(
-        username="basestring",
-        block_key=UsageKey,
-        scope=ScopeBase,
-        fields="seq(basestring)|set(basestring)|None"
-    )
+    @donottrack(StudentModule, StudentModuleHistory)
     def delete(self, username, block_key, scope=Scope.user_state, fields=None):
         """
         Delete the stored XBlock state for a single xblock usage.
@@ -113,12 +103,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
         """
         return self.delete_many(username, [block_key], scope, fields=fields)
 
-    @contract(
-        username="basestring",
-        block_key=UsageKey,
-        scope=ScopeBase,
-        fields="seq(basestring)|set(basestring)|None"
-    )
+    @donottrack(StudentModule, StudentModuleHistory)
     def get_mod_date(self, username, block_key, scope=Scope.user_state, fields=None):
         """
         Get the last modification date for fields from the specified blocks.
@@ -139,7 +124,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
             field: date for (_, field, date) in results
         }
 
-    @contract(username="basestring", block_keys="seq(UsageKey)|set(UsageKey)")
+    @donottrack(StudentModule, StudentModuleHistory)
     def _get_student_modules(self, username, block_keys):
         """
         Retrieve the :class:`~StudentModule`s for the supplied ``username`` and ``block_keys``.
@@ -166,12 +151,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
                 usage_key = student_module.module_state_key.map_into_course(student_module.course_id)
                 yield (student_module, usage_key)
 
-    @contract(
-        username="basestring",
-        block_keys="seq(UsageKey)|set(UsageKey)",
-        scope=ScopeBase,
-        fields="seq(basestring)|set(basestring)|None"
-    )
+    @donottrack(StudentModule, StudentModuleHistory)
     def get_many(self, username, block_keys, scope=Scope.user_state, fields=None):
         """
         Retrieve the stored XBlock state for a single xblock usage.
@@ -197,7 +177,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
                 state = json.loads(module.state)
             yield (usage_key, state)
 
-    @contract(username="basestring", block_keys_to_state="dict(UsageKey: dict(basestring: *))", scope=ScopeBase)
+    @donottrack(StudentModule, StudentModuleHistory)
     def set_many(self, username, block_keys_to_state, scope=Scope.user_state):
         """
         Set fields for a particular XBlock.
@@ -243,12 +223,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
                 # We just read this object, so we know that we can do an update
                 student_module.save(force_update=True)
 
-    @contract(
-        username="basestring",
-        block_keys="seq(UsageKey)|set(UsageKey)",
-        scope=ScopeBase,
-        fields="seq(basestring)|set(basestring)|None"
-    )
+    @donottrack(StudentModule, StudentModuleHistory)
     def delete_many(self, username, block_keys, scope=Scope.user_state, fields=None):
         """
         Delete the stored XBlock state for a many xblock usages.
@@ -276,12 +251,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
             # We just read this object, so we know that we can do an update
             student_module.save(force_update=True)
 
-    @contract(
-        username="basestring",
-        block_keys="seq(UsageKey)|set(UsageKey)",
-        scope=ScopeBase,
-        fields="seq(basestring)|set(basestring)|None"
-    )
+    @donottrack(StudentModule, StudentModuleHistory)
     def get_mod_date_many(self, username, block_keys, scope=Scope.user_state, fields=None):
         """
         Get the last modification date for fields from the specified blocks.
@@ -308,7 +278,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
             for field in json.loads(student_module.state):
                 yield (usage_key, field, student_module.modified)
 
-    @contract(username="basestring", block_key=UsageKey, scope=ScopeBase)
+    @donottrack(StudentModule, StudentModuleHistory)
     def get_history(self, username, block_key, scope=Scope.user_state):
         """
         Retrieve history of state changes for a given block for a given
@@ -344,6 +314,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
 
         return history_entries
 
+    @donottrack(StudentModule, StudentModuleHistory)
     def iter_all_for_block(self, block_key, scope=Scope.user_state, batch_size=None):
         """
         You get no ordering guarantees. Fetching will happen in batch_size
@@ -354,6 +325,7 @@ class DjangoXBlockUserStateClient(XBlockUserStateClient):
             raise ValueError("Only Scope.user_state is supported")
         raise NotImplementedError()
 
+    @donottrack(StudentModule, StudentModuleHistory)
     def iter_all_for_course(self, course_key, block_type=None, scope=Scope.user_state, batch_size=None):
         """
         You get no ordering guarantees. Fetching will happen in batch_size
