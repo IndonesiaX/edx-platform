@@ -5,9 +5,10 @@ import datetime
 import ddt
 import pytz
 
-from django.test import TestCase
+from django.conf import settings
 from django.test.utils import override_settings
 from django.db import connection, transaction
+from unittest import skipUnless
 
 from opaque_keys.edx.keys import CourseKey
 
@@ -29,6 +30,8 @@ from openedx.core.djangoapps.credit.models import (
     CreditEligibility
 )
 from student.tests.factories import UserFactory
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory
 
 
 TEST_CREDIT_PROVIDER_SECRET_KEY = "931433d583c84ca7ba41784bad3232e6"
@@ -39,7 +42,7 @@ TEST_CREDIT_PROVIDER_SECRET_KEY = "931433d583c84ca7ba41784bad3232e6"
     "ASU": TEST_CREDIT_PROVIDER_SECRET_KEY,
     "MIT": TEST_CREDIT_PROVIDER_SECRET_KEY
 })
-class CreditApiTestBase(TestCase):
+class CreditApiTestBase(ModuleStoreTestCase):
     """
     Base class for test cases of the credit API.
     """
@@ -51,6 +54,14 @@ class CreditApiTestBase(TestCase):
     PROVIDER_DESCRIPTION = "A new model for the Witchcraft and Wizardry School System."
     ENABLE_INTEGRATION = True
     FULFILLMENT_INSTRUCTIONS = "Sample fulfillment instruction for credit completion."
+    USER_INFO = {
+        "username": "bob",
+        "email": "bob@example.com",
+        "password": "test_bob",
+        "full_name": "Bob",
+        "mailing_address": "123 Fake Street, Cambridge MA",
+        "country": "US",
+    }
 
     def setUp(self, **kwargs):
         super(CreditApiTestBase, self).setUp()
@@ -73,6 +84,7 @@ class CreditApiTestBase(TestCase):
         return credit_course
 
 
+@skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in LMS')
 @ddt.ddt
 class CreditRequirementApiTests(CreditApiTestBase):
     """
@@ -298,6 +310,8 @@ class CreditRequirementApiTests(CreditApiTestBase):
     def test_satisfy_all_requirements(self):
         # Configure a course with two credit requirements
         self.add_credit_course()
+        CourseFactory.create(org='edX', number='DemoX', display_name='Demo_Course')
+
         requirements = [
             {
                 "namespace": "grade",
@@ -316,10 +330,12 @@ class CreditRequirementApiTests(CreditApiTestBase):
         ]
         api.set_credit_requirements(self.course_key, requirements)
 
+        user = UserFactory.create(username=self.USER_INFO['username'], password=self.USER_INFO['password'])
+
         # Satisfy one of the requirements, but not the other
         with self.assertNumQueries(7):
             api.set_credit_requirement_status(
-                "bob",
+                user.username,
                 self.course_key,
                 requirements[0]["namespace"],
                 requirements[0]["name"]
@@ -329,7 +345,7 @@ class CreditRequirementApiTests(CreditApiTestBase):
         self.assertFalse(api.is_user_eligible_for_credit("bob", self.course_key))
 
         # Satisfy the other requirement
-        with self.assertNumQueries(10):
+        with self.assertNumQueries(16):
             api.set_credit_requirement_status(
                 "bob",
                 self.course_key,

@@ -2568,3 +2568,7 @@ LTI_USER_EMAIL_DOMAIN = 'lti.example.com'
 # Number of seconds before JWT tokens expire
 JWT_EXPIRATION = 30
 JWT_ISSUER = None
+
+# Credit notifications settings
+NOTIFICATION_EMAIL_CSS = "templates/credit_notifications/credit_notification.css"
+NOTIFICATION_EMAIL_EDX_LOGO = "templates/credit_notifications/edx-logo-header.png"
