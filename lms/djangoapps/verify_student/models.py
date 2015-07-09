@@ -29,9 +29,10 @@ from django.utils.translation import ugettext as _
 
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
+from simple_history.models import HistoricalRecords
 from config_models.models import ConfigurationModel
 from course_modes.models import CourseMode
-from model_utils.models import StatusModel
+from model_utils.models import StatusModel, TimeStampedModel
 from model_utils import Choices
 from verify_student.ssencrypt import (
     random_aes_key, encrypt_and_encode,
@@ -882,6 +883,41 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
             return 'Not ID Verified'
         else:
             return 'ID Verified'
+
+
+class VerificationDeadline(TimeStampedModel):
+    """
+    Represent a verification deadline for a particular course.
+
+    The verification deadline is the datetime after which
+    users are no longer allowed to submit photos for initial verification
+    in a course.
+
+    Note that this is NOT the same as the "upgrade" deadline, after
+    which a user is no longer allowed to upgrade to a verified enrollment.
+
+    If no verification deadline record exists for a course,
+    then that course does not have a deadline.  This means that users
+    can submit photos at any time.
+    """
+    course_key = CourseKeyField(
+        max_length=255,
+        db_index=True,
+        help_text=ugettext_lazy(u"The course for which this deadline applies")
+    )
+
+    deadline = models.DateTimeField(
+        help_text=ugettext_lazy(
+            u"The datetime after which users are no longer allowed "
+            u"to submit photos for verification."
+        )
+    )
+
+    # Maintain a history of changes to deadlines for auditing purposes
+    history = HistoricalRecords()
+
+    class Meta:
+        unique_together = ("course_key", "deadline")
 
 
 class VerificationCheckpoint(models.Model):

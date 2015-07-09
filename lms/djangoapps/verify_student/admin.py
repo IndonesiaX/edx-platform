@@ -1,11 +1,20 @@
 from ratelimitbackend import admin
 from config_models.admin import ConfigurationModelAdmin
 from verify_student.models import (
+    VerificationDeadline,
     SoftwareSecurePhotoVerification,
     InCourseReverificationConfiguration,
     VerificationStatus,
     SkippedReverification,
 )
+
+
+class VerificationDeadlineAdmin(admin.ModelAdmin):
+    """
+    Admin for the SoftwareSecurePhotoVerification table.
+    """
+    list_display = ('course_key', 'deadline')
+    search_fields = ('course_key',)
 
 
 class SoftwareSecurePhotoVerificationAdmin(admin.ModelAdmin):
@@ -57,6 +66,7 @@ class SkippedReverificationAdmin(admin.ModelAdmin):
         return False
 
 
+admin.site.register(VerificationDeadline, VerificationDeadlineAdmin)
 admin.site.register(SoftwareSecurePhotoVerification, SoftwareSecurePhotoVerificationAdmin)
 admin.site.register(InCourseReverificationConfiguration, ConfigurationModelAdmin)
 admin.site.register(SkippedReverification, SkippedReverificationAdmin)
