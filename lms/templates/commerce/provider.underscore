@@ -1,0 +1,13 @@
+<p class="bold_param">
+  <%= interpolate(gettext("You still need to see visit %s to complete the credit process."), [interpolate("<a href='%s'>%s</a>", [provider_url, display_name]) ]) %>
+  <span><%= interpolate("<img src='%s' alt='%s'></image>", ["", display_name]) %></span>
+</p>
+<p>
+  <%= interpolate(gettext("In order to learn credit, %s requires learner to:"), [display_name]) %>
+</p>
+<div class="custom_instructions">
+  <div>
+    <%- fulfillment_instructions %>
+  </div>
+  <%= interpolate('<a href="%s" class="complete-course">%s</a>', [provider_url, gettext( "Complete Order")]) %>
+</div>

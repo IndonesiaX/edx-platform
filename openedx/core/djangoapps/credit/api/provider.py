@@ -8,6 +8,7 @@ import pytz
 import uuid
 
 from django.db import transaction
+from django_comment_client.utils import JsonResponse
 
 from openedx.core.djangoapps.credit.exceptions import (
     UserIsNotEligible,
@@ -49,7 +50,7 @@ def get_credit_providers():
     return CreditProvider.get_credit_providers()
 
 
-def get_credit_provider_info(provider_id):
+def get_credit_provider_info(request, provider_id):
     """Retrieve the 'CreditProvider' model data against provided
      credit provider.
 
@@ -89,7 +90,7 @@ def get_credit_provider_info(provider_id):
             "fulfillment_instructions": credit_provider.fulfillment_instructions
         }
 
-    return credit_provider_data
+    return JsonResponse(credit_provider_data)
 
 
 @transaction.commit_on_success
