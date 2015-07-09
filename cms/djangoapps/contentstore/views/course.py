@@ -262,9 +262,6 @@ def course_handler(request, course_key_string=None):
             if course_key_string is None:
                 return redirect(reverse("home"))
             else:
-                # Revoke sudo privileges from a request explicitly
-                if request.is_sudo(region=course_key_string):
-                    revoke_sudo_privileges(request, region=course_key_string)
                 return course_index(request, CourseKey.from_string(course_key_string))
         else:
             return HttpResponseNotFound()
