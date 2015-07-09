@@ -9,7 +9,7 @@ from pytz import UTC, utc
 from bok_choy.promise import EmptyPromise
 from nose.plugins.attrib import attr
 from .helpers import CohortTestMixin
-from ..helpers import UniqueCourseTest, EventsTestMixin, create_user_partition_json
+from ..helpers import UniqueCourseTest, EventsTestMixin, create_user_partition_json, get_sudo_access
 from xmodule.partitions.partitions import Group
 from ...fixtures.course import CourseFixture, XBlockFixtureDesc
 from ...pages.lms.auto_auth import AutoAuthPage
@@ -62,7 +62,7 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
 
         # go to the membership page on the instructor dashboard
         self.instructor_dashboard_page = InstructorDashboardPage(self.browser, self.course_id)
-        self.get_sudo_access(self.instructor_dashboard_page, instructor_password)
+        get_sudo_access(self.browser, self.instructor_dashboard_page, instructor_password)
         self.instructor_dashboard_page.visit()
         self.cohort_management_page = self.instructor_dashboard_page.select_cohort_management()
 
@@ -659,7 +659,7 @@ class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
 
         # go to the membership page on the instructor dashboard
         self.instructor_dashboard_page = InstructorDashboardPage(self.browser, self.course_id)
-        self.get_sudo_access(self.instructor_dashboard_page, self.instructor_password)
+        get_sudo_access(self.browser, self.instructor_dashboard_page, self.instructor_password)
         self.instructor_dashboard_page.visit()
         self.cohort_management_page = self.instructor_dashboard_page.select_cohort_management()
         self.cohort_management_page.wait_for_page()
@@ -953,7 +953,7 @@ class CohortContentGroupAssociationTest(UniqueCourseTest, CohortTestMixin):
 
         # go to the membership page on the instructor dashboard
         self.instructor_dashboard_page = InstructorDashboardPage(self.browser, self.course_id)
-        self.get_sudo_access(self.instructor_dashboard_page, instructor_password)
+        get_sudo_access(self.browser, self.instructor_dashboard_page, instructor_password)
         self.instructor_dashboard_page.visit()
         self.cohort_management_page = self.instructor_dashboard_page.select_cohort_management()
 

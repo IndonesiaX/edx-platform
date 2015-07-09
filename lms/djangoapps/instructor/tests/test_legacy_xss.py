@@ -39,9 +39,6 @@ class TestXss(ModuleStoreTestCase):
             course_id=self._course.id
         )
 
-    def _is_sudo(self, region=None):    # pylint: disable=unused-argument
-        return True
-
     def _test_action(self, action):
         """
         Test for XSS vulnerability in the given action
@@ -55,7 +52,7 @@ class TestXss(ModuleStoreTestCase):
         )
         req.user = self._instructor
         req.session = {}
-        req.is_sudo = self._is_sudo
+        req.is_sudo = lambda region=None: True
 
         mako_middleware_process_request(req)
         resp = legacy.instructor_dashboard(request=req, course_id=self._course.id.to_deprecated_string())

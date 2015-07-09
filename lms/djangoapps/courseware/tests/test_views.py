@@ -32,7 +32,7 @@ from course_modes.models import CourseMode
 from courseware.testutils import RenderXBlockTestMixin
 from courseware.tests.factories import StudentModuleFactory
 from edxmako.tests import mako_middleware_process_request
-from django_sudo.utils import sudo_middleware_process_request
+from django_sudo_helpers.tests.utils import sudo_middleware_process_request
 from student.models import CourseEnrollment
 from student.tests.factories import AdminFactory, UserFactory, CourseEnrollmentFactory
 from util.tests.test_date_utils import fake_ugettext, fake_pgettext

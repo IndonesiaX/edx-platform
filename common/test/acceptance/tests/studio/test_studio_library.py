@@ -8,6 +8,7 @@ from flaky import flaky
 
 from .base_studio_test import StudioLibraryTest
 from ...fixtures.course import XBlockFixtureDesc
+from ..helpers import get_sudo_access
 from ...pages.studio.auto_auth import AutoAuthPage
 from ...pages.studio.utils import add_component
 from ...pages.studio.library import LibraryEditPage
@@ -515,7 +516,7 @@ class LibraryUsersPageTest(StudioLibraryTest):
         AutoAuthPage(self.browser, username="second", email="second@example.com", no_login=True).visit()
 
         self.page = LibraryUsersPage(self.browser, self.library_key)
-        self.get_sudo_access(self.page, self.user.get("password"))
+        get_sudo_access(self.browser, self.page, self.user.get("password"))
         self.page.visit()
 
     def _refresh_page(self):

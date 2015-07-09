@@ -589,14 +589,6 @@ class UniqueCourseTest(WebAppTest):
         )
         return unicode(course_key)
 
-    def get_sudo_access(self, redirect_page, password):
-        """
-        Get sudo access for instructor or staff user.
-        """
-        sudo_password_page = SudoPage(self.browser, redirect_page)
-        sudo_password_page.visit()
-        sudo_password_page.submit_sudo_password_and_get_access(password)
-
 
 class YouTubeConfigError(Exception):
     """
@@ -693,3 +685,12 @@ class TestWithSearchIndexMixin(object):
     def _cleanup_index_file(self):
         """ Removes search index backing file """
         remove_file(self.TEST_INDEX_FILENAME)
+
+
+def get_sudo_access(browser, redirect_page, password):
+    """
+    Get sudo access for instructor or staff user.
+    """
+    sudo_password_page = SudoPage(browser, redirect_page)
+    sudo_password_page.visit()
+    sudo_password_page.submit_sudo_password_and_get_access(password)

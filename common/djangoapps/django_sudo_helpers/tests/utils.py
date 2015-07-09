@@ -1,5 +1,5 @@
 """
-sudo.utils
+django_sudo_heplers.utils
 """
 import django.contrib.sessions.middleware
 import sudo.middleware

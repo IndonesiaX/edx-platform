@@ -319,9 +319,6 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
         self.client.login(username=staff_member.username, password='test')
 
         for endpoint, args in self.staff_level_endpoints:
-            # # TODO: make these work
-            if endpoint in ['update_forum_role_membership', 'proxy_legacy_analytics', 'list_forum_members']:
-                continue
             self._access_endpoint(
                 endpoint,
                 args,
@@ -372,9 +369,6 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
         self.client.login(username=inst.username, password='test')
 
         for endpoint, args in self.staff_level_endpoints:
-            # TODO: make these work
-            if endpoint in ['update_forum_role_membership', 'proxy_legacy_analytics']:
-                continue
             self._access_endpoint(
                 endpoint,
                 args,
@@ -383,9 +377,6 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
             )
 
         for endpoint, args in self.instructor_level_endpoints:
-            # TODO: make this work
-            if endpoint in ['rescore_problem']:
-                continue
             self._access_endpoint(
                 endpoint,
                 args,

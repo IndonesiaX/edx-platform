@@ -62,9 +62,6 @@ def library_handler(request, library_key_string=None):
 
     # request method is get, since only GET and POST are allowed by @require_http_methods(('GET', 'POST'))
     if library_key_string:
-        # Revoke sudo privileges from a request explicitly
-        if request.is_sudo(region=library_key_string):
-            revoke_sudo_privileges(request, region=library_key_string)
         return _display_library(library_key_string, request)
 
     return _list_libraries(request)
@@ -74,6 +71,11 @@ def _display_library(library_key_string, request):
     """
     Displays single library
     """
+
+    # Revoke sudo privileges from a request explicitly
+    if request.is_sudo(region=library_key_string):
+        revoke_sudo_privileges(request, region=library_key_string)
+
     library_key = CourseKey.from_string(library_key_string)
     if not isinstance(library_key, LibraryLocator):
         log.exception("Non-library key passed to content libraries API.")  # Should never happen due to url regex
