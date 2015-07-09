@@ -12,7 +12,7 @@ from django.utils import http
 
 import contentstore.views.component as views
 from contentstore.views.tests.utils import StudioPageTestCase
-from django_sudo.utils import sudo_middleware_process_request
+from django_sudo_helpers.tests.utils import sudo_middleware_process_request
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.factories import ItemFactory
 

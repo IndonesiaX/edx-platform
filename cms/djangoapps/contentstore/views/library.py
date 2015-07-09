@@ -17,7 +17,7 @@ from django.conf import settings
 from django.utils.translation import ugettext as _
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django_sudo.decorators import sudo_required
+from django_sudo_helpers.decorators import sudo_required
 from sudo.utils import revoke_sudo_privileges
 from edxmako.shortcuts import render_to_response
 from opaque_keys import InvalidKeyError
