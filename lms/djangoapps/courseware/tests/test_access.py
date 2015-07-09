@@ -9,9 +9,6 @@ import pytz
 
 from django.test import TestCase
 from django.core.urlresolvers import reverse
-from django.template import defaultfilters
-from django.utils import translation
-from django.utils.timezone import UTC
 from mock import Mock, patch
 from nose.plugins.attrib import attr
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
@@ -19,17 +16,27 @@ from opaque_keys.edx.locations import SlashSeparatedCourseKey
 import courseware.access as access
 import courseware.access_response as access_response
 from courseware.masquerade import CourseMasquerade
-from courseware.tests.factories import UserFactory, StaffFactory, InstructorFactory, BetaTesterFactory
+from courseware.tests.factories import (
+    BetaTesterFactory,
+    GlobalStaffFactory,
+    InstructorFactory,
+    StaffFactory,
+    UserFactory,
+)
 from courseware.tests.helpers import LoginEnrollmentTestCase
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
-from student.tests.factories import AnonymousUserFactory, CourseEnrollmentAllowedFactory, CourseEnrollmentFactory
+from student.tests.factories import (
+    AnonymousUserFactory,
+    CourseEnrollmentAllowedFactory,
+    CourseEnrollmentFactory,
+)
 from xmodule.course_module import (
-    CATALOG_VISIBILITY_CATALOG_AND_ABOUT, CATALOG_VISIBILITY_ABOUT,
-    CATALOG_VISIBILITY_NONE
+    CATALOG_VISIBILITY_CATALOG_AND_ABOUT,
+    CATALOG_VISIBILITY_ABOUT,
+    CATALOG_VISIBILITY_NONE,
 )
 from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-from xmodule.course_module import DEFAULT_START_DATE
 
 from util.milestones_helpers import (
     set_prerequisite_courses,
@@ -48,7 +55,7 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
     Tests for the various access controls on the student dashboard
     """
     TOMORROW = datetime.datetime.now(pytz.utc) + datetime.timedelta(days=1)
-    ADVERTISED_START = "Spring 2016"
+    YESTERDAY = datetime.datetime.now(pytz.utc) - datetime.timedelta(days=1)
 
     def setUp(self):
         super(AccessTestCase, self).setUp()
@@ -60,11 +67,10 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.global_staff = UserFactory(is_staff=True)
         self.course_staff = StaffFactory(course_key=self.course.course_key)
         self.course_instructor = InstructorFactory(course_key=self.course.course_key)
-        self.staff = Mock(is_staff=True)
+        self.staff = GlobalStaffFactory()
 
-    def verify_access(self, mock_unit, student_should_have_access):
+    def verify_access(self, mock_unit, student_should_have_access, expected_error_type=None):
         """ Verify the expected result from _has_access_descriptor """
-
         self.assertEqual(
             student_should_have_access,
             bool(access._has_access_descriptor(
@@ -75,11 +81,11 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
             access._has_access_descriptor(self.course_staff, 'load', mock_unit, course_key=self.course.course_key)
         )
 
-    def verify_error_type(self, mock_unit, expected_error_type):
-        self.assertIsInstance(
-            access._has_access_descriptor(self.anonymous_user, 'load', mock_unit, course_key=self.course.course_key),
-            expected_error_type
-        )
+        if expected_error_type is not None:
+            self.assertIsInstance(
+                access._has_access_descriptor(self.anonymous_user, 'load', mock_unit,
+                                              course_key=self.course.course_key),
+                expected_error_type)
 
     def verify_start_message(self, mock_unit, expected_start_message):
         self.assertEquals(
@@ -140,21 +146,27 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
 
         self.assertRaises(ValueError, access._has_access_string, user, 'not_staff', 'global')
 
-    def test__has_access_error_desc(self):
-
+    @ddt.data(
+        ('load', False, True, True),
+        ('staff', False, True, True),
+        ('instructor', False, False, True)
+    )
+    @ddt.unpack
+    def test__has_access_error_desc(self, action, expected_student, expected_staff, expected_instructor):
         descriptor = Mock()
 
-        self.assertFalse(access._has_access_error_desc(self.student, 'load', descriptor, self.course.course_key))
-        self.assertTrue(access._has_access_error_desc(self.course_staff, 'load', descriptor, self.course.course_key))
-        self.assertTrue(access._has_access_error_desc(self.course_instructor, 'load', descriptor, self.course.course_key))
-
-        self.assertFalse(access._has_access_error_desc(self.student, 'staff', descriptor, self.course.course_key))
-        self.assertTrue(access._has_access_error_desc(self.course_staff, 'staff', descriptor, self.course.course_key))
-        self.assertTrue(access._has_access_error_desc(self.course_instructor, 'staff', descriptor, self.course.course_key))
-
-        self.assertFalse(access._has_access_error_desc(self.student, 'instructor', descriptor, self.course.course_key))
-        self.assertFalse(access._has_access_error_desc(self.course_staff, 'instructor', descriptor, self.course.course_key))
-        self.assertTrue(access._has_access_error_desc(self.course_instructor, 'instructor', descriptor, self.course.course_key))
+        self.assertEquals(
+            bool(access._has_access_error_desc(self.student, action, descriptor, self.course.course_key)),
+            expected_student
+        )
+        self.assertEquals(
+            bool(access._has_access_error_desc(self.course_staff, action, descriptor, self.course.course_key)),
+            expected_staff
+        )
+        self.assertEquals(
+            bool(access._has_access_error_desc(self.course_instructor, action, descriptor, self.course.course_key)),
+            expected_instructor
+        )
 
         with self.assertRaises(ValueError):
             access._has_access_error_desc(self.course_instructor, 'not_load_or_staff', descriptor, self.course.course_key)
@@ -163,6 +175,7 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         # TODO: override DISABLE_START_DATES and test the start date branch of the method
         user = Mock()
         descriptor = Mock(user_partitions=[])
+        descriptor._class_tags = {}
 
         # Always returns true because DISABLE_START_DATES is set in test.py
         self.assertTrue(access._has_access_descriptor(user, 'load', descriptor))
@@ -170,43 +183,25 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         with self.assertRaises(ValueError):
             access._has_access_descriptor(user, 'not_load_or_staff', descriptor)
 
+    @ddt.data(
+        (True, None, False, access_response.VisibilityError),
+        (False, None, True),
+        (True, YESTERDAY, False, access_response.VisibilityError),
+        (False, YESTERDAY, True),
+        (True, TOMORROW, False, access_response.VisibilityError),
+        (False, TOMORROW, False, access_response.StartDateError)
+    )
+    @ddt.unpack
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
-    def test__has_access_descriptor_staff_lock(self):
+    def test__has_access_descriptor_staff_lock(self, staff_lock, start, expected_access, expected_error_type=None):
         """
         Tests that "visible_to_staff_only" overrides start date.
         """
         mock_unit = Mock(user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
-
-        # No start date, staff lock on
-        mock_unit.visible_to_staff_only = True
-        self.verify_access(mock_unit, False)
-        self.verify_error_type(mock_unit, access_response.VisibilityError)
-
-        # No start date, staff lock off.
-        mock_unit.visible_to_staff_only = False
-        self.verify_access(mock_unit, True)
-
-        # Start date in the past, staff lock on.
-        mock_unit.start = datetime.datetime.now(pytz.utc) - datetime.timedelta(days=1)
-        mock_unit.visible_to_staff_only = True
-        self.verify_access(mock_unit, False)
-        self.verify_error_type(mock_unit, access_response.VisibilityError)
-
-        # Start date in the past, staff lock off.
-        mock_unit.visible_to_staff_only = False
-        self.verify_access(mock_unit, True)
-
-        # Start date in the future, staff lock on.
-        mock_unit.start = datetime.datetime.now(pytz.utc) + datetime.timedelta(days=1)  # release date in the future
-        mock_unit.visible_to_staff_only = True
-        self.verify_access(mock_unit, False)
-        self.verify_error_type(mock_unit, access_response.VisibilityError)
-
-        # Start date in the future, staff lock off.
-        mock_unit.visible_to_staff_only = False
-        self.verify_access(mock_unit, False)
-        self.verify_error_type(mock_unit, access_response.StartDateError)
+        mock_unit.visible_to_staff_only = staff_lock
+        mock_unit.start = start
+        self.verify_access(mock_unit, expected_access, expected_error_type)
 
     def test__has_access_descriptor_beta_user(self):
         mock_unit = Mock(user_partitions=[])
@@ -218,89 +213,36 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.assertTrue(bool(access._has_access_descriptor(
             self.beta_user, 'load', mock_unit, course_key=self.course.course_key)))
 
+    @ddt.data(None, YESTERDAY, TOMORROW)
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
     @patch('courseware.access.get_current_request_hostname', Mock(return_value='preview.localhost'))
-    def test__has_access_descriptor_in_preview_mode(self):
+    def test__has_access_descriptor_in_preview_mode(self, start):
         """
         Tests that descriptor has access in preview mode.
         """
         mock_unit = Mock(user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
-
-        # No start date.
         mock_unit.visible_to_staff_only = False
+        mock_unit.start = start
         self.verify_access(mock_unit, True)
 
-        # Start date in the past.
-        mock_unit.start = datetime.datetime.now(pytz.utc) - datetime.timedelta(days=1)
-        self.verify_access(mock_unit, True)
-
-        # Start date in the future.
-        mock_unit.start = datetime.datetime.now(pytz.utc) + datetime.timedelta(days=1)  # release date in the future
-        self.verify_access(mock_unit, True)
-
+    @ddt.data(
+        (None, True),
+        (YESTERDAY, True),
+        (TOMORROW, False, access_response.StartDateError)
+    )
+    @ddt.unpack
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
     @patch('courseware.access.get_current_request_hostname', Mock(return_value='localhost'))
-    def test__has_access_descriptor_when_not_in_preview_mode(self):
+    def test__has_access_descriptor_when_not_in_preview_mode(self, start, expected_access, expected_error_type=None):
         """
         Tests that descriptor has no access when start date in future & without preview.
         """
         mock_unit = Mock(user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
-
-        # No start date.
         mock_unit.visible_to_staff_only = False
-        self.verify_access(mock_unit, True)
-
-        # Start date in the past.
-        mock_unit.start = datetime.datetime.now(pytz.utc) - datetime.timedelta(days=1)
-        self.verify_access(mock_unit, True)
-
-        # Start date in the future.
-        mock_unit.start = datetime.datetime.now(pytz.utc) + datetime.timedelta(days=1)  # release date in the future
-        self.verify_access(mock_unit, False)
-        self.verify_error_type(mock_unit, access_response.StartDateError)
-
-    @ddt.data(
-        (TOMORROW, ADVERTISED_START, ADVERTISED_START),
-        (TOMORROW, None, defaultfilters.date(TOMORROW, "DATE_FORMAT")),
-        (DEFAULT_START_DATE, ADVERTISED_START, ADVERTISED_START),
-        (DEFAULT_START_DATE, None, None)
-    )
-    @ddt.unpack
-    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
-    def test__has_access_descriptor_start_message(self, start, advertised_start, expected_message):
-        """
-        Tests that the correct start message is returned in the case the course has not started
-        Cases: start date not default and advertised start set, start date default and advertised start set
-               start date not default and no advertised start, Start date default and no advertised start
-        """
-        mock_unit = Mock(user_partitions=[])
-        mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
-        mock_unit.visible_to_staff_only = False
-
         mock_unit.start = start
-        mock_unit.advertised_start = advertised_start
-        self.verify_error_type(mock_unit, access_response.StartDateError)
-        self.verify_start_message(mock_unit, expected_message)
-
-    @ddt.data(("ko-kr", "2050년 1월 1일"),
-              ("fr", "1 janvier 2050"))
-    @ddt.unpack
-    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
-    def test_start_date_localization(self, language, expected_date):
-
-        mock_unit = Mock(user_partitions=[])
-        mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
-        mock_unit.visible_to_staff_only = False
-        mock_unit.start = datetime.datetime(2050, 1, 1, tzinfo=UTC())
-        mock_unit.advertised_start = None
-
-        translation.activate(language)
-        self.assertEqual(
-            access._has_access_descriptor(
-                self.anonymous_user, 'load', mock_unit, course_key=self.course.course_key).to_json()['user_message'],
-            expected_date)
+        self.verify_access(mock_unit, expected_access, expected_error_type)
 
     def test__has_access_course_desc_can_enroll(self):
         yesterday = datetime.datetime.now(pytz.utc) - datetime.timedelta(days=1)
@@ -405,12 +347,11 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         )
         set_prerequisite_courses(course.id, pre_requisite_courses)
 
-        #user should not be able to load course even if enrolled
+        # user should not be able to load course even if enrolled
         CourseEnrollmentFactory(user=user, course_id=course.id)
         response = access._has_access_course_desc(user, 'view_courseware_with_prerequisites', course)
         self.assertFalse(response)
         self.assertIsInstance(response, access_response.MilestoneError)
-
         # Staff can always access course
         staff = StaffFactory.create(course_key=course.id)
         self.assertTrue(access._has_access_course_desc(staff, 'view_courseware_with_prerequisites', course))
@@ -427,8 +368,6 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
     def test__access_on_mobile(self, mobile, student_expected, staff_expected):
         """
         Test course access on mobile for staff and students.
-        Cases: staff and mobile available, staff and mobile unavailable (staff overrides mobile flag),
-               student and mobile available, student and mobile unavailable
         """
         descriptor = Mock(user_partitions=[])
         descriptor._class_tags = {}

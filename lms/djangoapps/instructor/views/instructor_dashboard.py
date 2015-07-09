@@ -62,7 +62,7 @@ class InstructorDashboardTab(CourseTab):
         """
         Returns true if the specified user has staff access.
         """
-        return user and has_access(user, 'staff', course, course.id)
+        return bool(user and has_access(user, 'staff', course, course.id))
 
 
 @ensure_csrf_cookie

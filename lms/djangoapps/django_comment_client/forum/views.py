@@ -276,7 +276,7 @@ def forum_form_discussion(request, course_key):
             'threads': _attr_safe_json(threads),
             'thread_pages': query_params['num_pages'],
             'user_info': _attr_safe_json(user_info),
-            'flag_moderator': (
+            'flag_moderator': bool(
                 has_permission(request.user, 'openclose_thread', course.id) or
                 has_access(request.user, 'staff', course)
             ),
@@ -385,7 +385,7 @@ def single_thread(request, course_key, discussion_id, thread_id):
             'is_moderator': is_moderator,
             'thread_pages': query_params['num_pages'],
             'is_course_cohorted': is_course_cohorted(course_key),
-            'flag_moderator': (
+            'flag_moderator': bool(
                 has_permission(request.user, 'openclose_thread', course.id) or
                 has_access(request.user, 'staff', course)
             ),
