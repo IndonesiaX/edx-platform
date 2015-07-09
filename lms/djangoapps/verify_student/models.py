@@ -900,10 +900,12 @@ class VerificationDeadline(TimeStampedModel):
     then that course does not have a deadline.  This means that users
     can submit photos at any time.
     """
+
     course_key = CourseKeyField(
         max_length=255,
         db_index=True,
-        help_text=ugettext_lazy(u"The course for which this deadline applies")
+        unique=True,
+        help_text=ugettext_lazy(u"The course for which this deadline applies"),
     )
 
     deadline = models.DateTimeField(
@@ -916,8 +918,51 @@ class VerificationDeadline(TimeStampedModel):
     # Maintain a history of changes to deadlines for auditing purposes
     history = HistoricalRecords()
 
-    class Meta:
-        unique_together = ("course_key", "deadline")
+    @classmethod
+    def set_deadline(cls, course_key, deadline):
+        """
+        Configure the verification deadline for a course.
+
+        If `deadline` is `None`, then the course will have no verification
+        deadline.  In this case, users will be able to verify for the course
+        at any time.
+
+        Arguments:
+            course_key (CourseKey): Identifier for the course.
+            deadline (datetime or None): The verification deadline.
+
+        """
+        if deadline is None:
+            VerificationDeadline.objects.filter(course_key=course_key).delete()
+        else:
+            record, created = VerificationDeadline.objects.get_or_create(
+                course_key=course_key,
+                defaults={"deadline": deadline}
+            )
+
+            if not created:
+                record.deadline = deadline
+                record.save()
+
+    @classmethod
+    def deadlines_for_courses(cls, course_keys):
+        """
+        Retrieve verification deadlines for particular courses.
+
+        Arguments:
+            course_keys (list): List of `CourseKey`s.
+
+        Returns:
+            dict: Map of course keys to datetimes (verification deadlines)
+
+        """
+        # TODO: cache this?
+        return {
+            deadline.course_key: deadline.deadline
+            for deadline in VerificationDeadline.objects.filter(
+                course_key__in=course_keys
+            )
+        }
 
 
 class VerificationCheckpoint(models.Model):

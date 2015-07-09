@@ -27,19 +27,13 @@ class Migration(SchemaMigration):
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('created', self.gf('model_utils.fields.AutoCreatedField')(default=datetime.datetime.now)),
             ('modified', self.gf('model_utils.fields.AutoLastModifiedField')(default=datetime.datetime.now)),
-            ('course_key', self.gf('xmodule_django.models.CourseKeyField')(max_length=255, db_index=True)),
+            ('course_key', self.gf('xmodule_django.models.CourseKeyField')(unique=True, max_length=255, db_index=True)),
             ('deadline', self.gf('django.db.models.fields.DateTimeField')()),
         ))
         db.send_create_signal('verify_student', ['VerificationDeadline'])
 
-        # Adding unique constraint on 'VerificationDeadline', fields ['course_key', 'deadline']
-        db.create_unique('verify_student_verificationdeadline', ['course_key', 'deadline'])
-
 
     def backwards(self, orm):
-        # Removing unique constraint on 'VerificationDeadline', fields ['course_key', 'deadline']
-        db.delete_unique('verify_student_verificationdeadline', ['course_key', 'deadline'])
-
         # Deleting model 'HistoricalVerificationDeadline'
         db.delete_table('verify_student_historicalverificationdeadline')
 
@@ -122,7 +116,7 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
             'photo_id_image_url': ('django.db.models.fields.URLField', [], {'max_length': '255', 'blank': 'True'}),
             'photo_id_key': ('django.db.models.fields.TextField', [], {'max_length': '1024'}),
-            'receipt_id': ('django.db.models.fields.CharField', [], {'default': "'d0866785-4c5e-4285-834d-6d07f0ef79cf'", 'max_length': '255', 'db_index': 'True'}),
+            'receipt_id': ('django.db.models.fields.CharField', [], {'default': "'9b14470c-4219-4c69-9a38-d8ff14b60b09'", 'max_length': '255', 'db_index': 'True'}),
             'reviewing_service': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
             'reviewing_user': ('django.db.models.fields.related.ForeignKey', [], {'default': 'None', 'related_name': "'photo_verifications_reviewed'", 'null': 'True', 'to': "orm['auth.User']"}),
             'status': ('model_utils.fields.StatusField', [], {'default': "'created'", 'max_length': '100', u'no_check_for_status': 'True'}),
@@ -139,8 +133,8 @@ class Migration(SchemaMigration):
             'photo_verification': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['verify_student.SoftwareSecurePhotoVerification']", 'symmetrical': 'False'})
         },
         'verify_student.verificationdeadline': {
-            'Meta': {'unique_together': "(('course_key', 'deadline'),)", 'object_name': 'VerificationDeadline'},
-            'course_key': ('xmodule_django.models.CourseKeyField', [], {'max_length': '255', 'db_index': 'True'}),
+            'Meta': {'object_name': 'VerificationDeadline'},
+            'course_key': ('xmodule_django.models.CourseKeyField', [], {'unique': 'True', 'max_length': '255', 'db_index': 'True'}),
             'created': ('model_utils.fields.AutoCreatedField', [], {'default': 'datetime.datetime.now'}),
             'deadline': ('django.db.models.fields.DateTimeField', [], {}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
