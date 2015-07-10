@@ -1,5 +1,5 @@
 
-from .xblock_information import XBlockInformation, XBlockInformation
+from .course_cache_data import XBlockCacheEntry, XBlockInformation
 from .transformations import TRANSFORMATIONS
 
 
@@ -28,13 +28,13 @@ def _load_block_tree(block, block_map, parent_map, child_map):
             _load_block_tree(child, block_map, parent_map, child_map)
 
 
-def _get_block_information_for_cache(root_block):
+def _get_block_cache_entries(root_block):
     """
     Arguments:
         root_block (XBlock)
 
     Returns:
-        dict[UsageKey: XBlockInformation]: All blocks under root_block_key.
+        dict[UsageKey: XBlockCacheEntry]: All blocks under root_block_key.
             Contains information from the "collect" phase.
     """
 
@@ -62,7 +62,7 @@ def _get_block_information_for_cache(root_block):
 
     # Build a dictionary mapping usage keys to block information.
     return {
-        usage_key: XBlockInformation(
+        usage_key: XBlockCacheEntry(
             usage_key,
             parent_map[usage_key],
             child_map[usage_key],
@@ -79,26 +79,26 @@ def _get_block_information_for_cache(root_block):
     }
 
 
-def _get_block_information_for_user(root_block, cached_block_information, user):
+def _get_block_information_for_user(root_block, block_cache_entries, user):
     """
     Arguments:
         root_block_key (UsageKey)
-        block_information (dict[UsageKey: XBlockInformation]): All blocks under
-            root_block_key. Contains information from the "collect" phase.
+        block_cache_entries (dict[UsageKey: XBlockCacheEntry]): All blocks
+            under root_block_key. Contains information from the "collect" phase.
+            THIS DICTIONARY WILL BE MUTATED.
         user (User)
 
     Returns:
         dict[UsageKey: XBlockInformation]: User-specific blocks under
             root_block_key. Contains information from after the
             "apply" phase.
+
+    Note:
+        block_cache_entries will be mutated in place.
     """
-    result = cached_block_information.copy()
     for transformation in TRANSFORMATIONS:
-        transformation.apply(root_block, result, user)
-    for __, block in result.iteritems():
-        # Remove information that was necessary for generating the course, but
-        # that we don't want to give back to the caller.
-        # TODO: instead, do this using inheritance or something
-        block.transformation_data = None
-        block.parents = None
-    return result
+        transformation.apply(root_block, block_cache_entries, user)
+    return {
+        usage_key: XBlockInformation.from_cache_entry(cache_entry)
+        for usage_key, cache_entry in block_cache_entries.iteritems()
+    }

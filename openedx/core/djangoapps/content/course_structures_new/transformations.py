@@ -23,11 +23,11 @@ class CourseStructureTransformation(object):
         pass
 
     @classmethod
-    def apply(cls, root_block_key, block_information_dict, user):
+    def apply(cls, root_block_key, block_cache_entries, user):
         """
         Arguments:
             root_block_key (UsageKey)
-            block_information_dict (dict[UsageKey: XBlockInformation])
+            block_cache_entries (dict[UsageKey: XBlockCacheEntry])
             user (User)
         """
         pass
@@ -70,25 +70,25 @@ class VisibilityTransformation(CourseStructureTransformation):
         return result_dict
 
     @classmethod
-    def apply(cls, root_block_key, block_information_dict, user):
+    def apply(cls, root_block_key, block_cache_entries, user):
         """
         Arguments:
             root_block_key (UsageKey)
-            block_information_dict (dict[UsageKey: XBlockInformation])
+            block_cache_entries (dict[UsageKey: XBlockCacheEntry])
             user (User)
         """
-        for usage_key in block_information_dict.keys():
-            block_info = block_information_dict[usage_key]
+        for usage_key in block_cache_entries.keys():
+            cache_entry = block_cache_entries[usage_key]
             block_accessible = (
-                not block_info.transformation_data.visible_to_staff_only
+                not cache_entry.get_transformation_data(cls).visible_to_staff_only
                 or _has_staff_access_to_block(user, usage_key)
             )
-            if block_accessible:
-                for parent_key in block_info.parent_keys:
-                    parent_info = block_information_dict.get(parent_key, None)
+            if not block_accessible:
+                for parent_key in cache_entry.parent_keys:
+                    parent_info = block_cache_entries.get(parent_key, None)
                     if parent_info:
                         parent_info.child_keys.remove(usage_key)
-                del block_information_dict[usage_key]
+                del block_cache_entries[usage_key]
 
 
 TRANSFORMATIONS = [
