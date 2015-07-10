@@ -66,3 +66,23 @@ class XBlockInformation(object):
             block_cache_entry.child_keys,
             block_cache_entry.block_fields
         )
+
+
+class CourseUserInfo(object):
+    """
+    Information for a user in relation to a specific course.
+    """
+
+    def __init__(self):
+        self.is_course_staff = None
+
+    @staticmethod
+    def load_from_course(user, course):
+        """
+        Arguments:
+            course (CourseDescriptor)
+
+        Returns:
+            CourseUserInfo
+        """
+        pass  # todo

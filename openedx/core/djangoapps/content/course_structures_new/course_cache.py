@@ -1,5 +1,5 @@
 
-from .course_cache_data import XBlockCacheEntry, XBlockInformation
+from .course_cache_data import XBlockCacheEntry, XBlockInformation, CourseUserInfo
 from .transformations import TRANSFORMATIONS
 
 
@@ -28,10 +28,10 @@ def _load_block_tree(block, block_map, parent_map, child_map):
             _load_block_tree(child, block_map, parent_map, child_map)
 
 
-def _get_block_cache_entries(root_block):
+def _get_block_cache_entries(course):
     """
     Arguments:
-        root_block (XBlock)
+        course (CourseDescriptor)
 
     Returns:
         dict[UsageKey: XBlockCacheEntry]: All blocks under root_block_key.
@@ -42,7 +42,7 @@ def _get_block_cache_entries(root_block):
     block_map = {}
     parent_map = {}
     child_map = {}
-    _load_block_tree(root_block, block_map, parent_map, child_map)
+    _load_block_tree(course, block_map, parent_map, child_map)
 
     # Define functions for traversing course hierarchy.
     get_children = lambda block: [
@@ -58,7 +58,7 @@ def _get_block_cache_entries(root_block):
     collected_data = {}
     for transformation in TRANSFORMATIONS:
         required_fields |= transformation.required_fields
-        collected_data[transformation.__name__] = transformation.collect(root_block, get_children, get_parents)
+        collected_data[transformation.__name__] = transformation.collect(course, get_children, get_parents)
 
     # Build a dictionary mapping usage keys to block information.
     return {
@@ -79,10 +79,15 @@ def _get_block_cache_entries(root_block):
     }
 
 
-def _get_block_information_for_user(root_block, block_cache_entries, user):
+def _get_block_information_for_user(user, course_key, root_block, block_cache_entries):
     """
     Arguments:
-        root_block_key (UsageKey)
+        user (User)
+        course_key (CourseKey): Course to which desired blocks belong.
+        root_block_key (UsageKey): Usage key for root block in the subtree
+            for which block information will be returned. Passing in the usage
+            key of a course will return the entire user-specific course
+            hierarchy.
         block_cache_entries (dict[UsageKey: XBlockCacheEntry]): All blocks
             under root_block_key. Contains information from the "collect" phase.
             THIS DICTIONARY WILL BE MUTATED.
@@ -96,8 +101,10 @@ def _get_block_information_for_user(root_block, block_cache_entries, user):
     Note:
         block_cache_entries will be mutated in place.
     """
+    user_info = CourseUserInfo.load_from_course(user, course_key)
+
     for transformation in TRANSFORMATIONS:
-        transformation.apply(root_block, block_cache_entries, user)
+        transformation.apply(root_block, block_cache_entries, user_info)
     return {
         usage_key: XBlockInformation.from_cache_entry(cache_entry)
         for usage_key, cache_entry in block_cache_entries.iteritems()

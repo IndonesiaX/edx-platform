@@ -33,20 +33,16 @@ class CourseStructureTransformation(object):
         pass
 
 
-def _has_staff_access_to_block(user, usage_key):
-    pass
-
-
 class VisibilityTransformation(CourseStructureTransformation):
 
     required_fields = set()
     collected_data_class = namedtuple('VisibilityTransformationData', 'visible_to_staff_only')
 
     @classmethod
-    def collect(cls, root_block, get_children, get_parents):
+    def collect(cls, course, get_children, get_parents):
         """
         Arguments:
-            root_block_key (XBlock)
+            course (CourseDescriptor)
             get_children (XBlock -> list[XBlock])
             get_parents (XBlock -> list[XBlock])
 
@@ -54,7 +50,7 @@ class VisibilityTransformation(CourseStructureTransformation):
             dict[UsageKey: data_class]
         """
         block_gen = generate_blocks_topological(
-            root_block, get_parents, get_children
+            course, get_parents, get_children
         )
         result_dict = {}
         for block in block_gen:
@@ -70,18 +66,18 @@ class VisibilityTransformation(CourseStructureTransformation):
         return result_dict
 
     @classmethod
-    def apply(cls, root_block_key, block_cache_entries, user):
+    def apply(cls, root_block_key, block_cache_entries, user_info):
         """
         Arguments:
             root_block_key (UsageKey)
             block_cache_entries (dict[UsageKey: XBlockCacheEntry])
-            user (User)
+            user_info (CourseUserInfo)
         """
         for usage_key in block_cache_entries.keys():
             cache_entry = block_cache_entries[usage_key]
             block_accessible = (
                 not cache_entry.get_transformation_data(cls).visible_to_staff_only
-                or _has_staff_access_to_block(user, usage_key)
+                or user_info.is_course_staff
             )
             if not block_accessible:
                 for parent_key in cache_entry.parent_keys:
