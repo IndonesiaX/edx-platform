@@ -964,6 +964,24 @@ class VerificationDeadline(TimeStampedModel):
             )
         }
 
+    @classmethod
+    def deadline_for_course(cls, course_key):
+        """
+        Retrieve the verification deadline for a particular course.
+
+        Arguments:
+            course_key (CourseKey): The identifier for the course.
+
+        Returns:
+            datetime or None
+
+        """
+        try:
+            deadline = cls.objects.get(course_key=course_key)
+            return deadline.deadline
+        except cls.DoesNotExist:
+            return None
+
 
 class VerificationCheckpoint(models.Model):
     """Represents a point at which a user is asked to re-verify his/her
