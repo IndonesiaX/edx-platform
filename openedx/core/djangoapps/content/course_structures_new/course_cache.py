@@ -49,7 +49,7 @@ def _get_block_cache_entries(course):
         block_map[child_key] for child_key in child_map[block.usage_key]
     ]
     get_parents = lambda block: [
-        block_map[child_key] for child_key in parent_map[block.usage_key]
+        block_map[parent_key] for parent_key in parent_map[block.usage_key]
     ]
 
     # For each transformation, extract required fields and collect specially
@@ -67,12 +67,12 @@ def _get_block_cache_entries(course):
             parent_map[usage_key],
             child_map[usage_key],
             {
-                required_field.__name__: getattr(block, required_field)
+                required_field.__name__: getattr(block, required_field, None)
                 for required_field in required_fields
             },
             {
-                transformation_name: collected_data[transformation_name][usage_key]
-                for transformation_name in collected_data
+                transformation_name: transformation_data[usage_key]
+                for transformation_name, transformation_data in collected_data.iteritems()
             }
         )
         for usage_key, block in block_map.iteritems()
