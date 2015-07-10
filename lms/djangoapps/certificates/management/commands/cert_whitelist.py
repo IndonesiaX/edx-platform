@@ -12,6 +12,17 @@ from certificates.models import CertificateWhitelist
 from django.contrib.auth.models import User
 
 
+def get_user(username):
+    """
+     This function takes the string username and fetch relavent user object from database
+    """
+    username = username.strip()
+    if '@' in username:
+        user = User.objects.get(email=username)
+    else:
+        user = User.objects.get(username=username)
+    return user
+
 class Command(BaseCommand):
 
     help = """
@@ -58,14 +69,13 @@ class Command(BaseCommand):
             raise CommandError("You must specify a course-id")
 
         def update_user_whitelist(username, add=True):
-            if '@' in username:
-                user = User.objects.get(email=username)
-            else:
-                user = User.objects.get(username=username)
+            """
+            Update the status of whitelist user(s)
+            """
+            user = get_user(username)
             cert_whitelist, _created = CertificateWhitelist.objects.get_or_create(
                 user=user, course_id=course
             )
-
             cert_whitelist.whitelist = add
             cert_whitelist.save()
 
@@ -82,12 +92,10 @@ class Command(BaseCommand):
         if options['add'] or options['del']:
             user_str = options['add'] or options['del']
             add_to_whitelist = True if options['add'] else False
-            if "," in user_str:
-                users_list = user_str.split(",")
-                for user in users_list:
-                    update_user_whitelist(user, add=add_to_whitelist)
-            else:
-                update_user_whitelist(user_str, add=add_to_whitelist)
+            users_list = user_str.split(",")
+            for username in users_list:
+                if username:
+                    update_user_whitelist(username, add=add_to_whitelist)
 
         whitelist = CertificateWhitelist.objects.filter(course_id=course)
         wl_users = '\n'.join(
