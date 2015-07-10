@@ -143,9 +143,11 @@ class CapaFields(object):
     )
     rerandomize = Randomization(
         display_name=_("Randomization"),
-        help=_("Defines how often inputs are randomized when a student loads the problem. "
-               "This setting only applies to problems that can have randomly generated numeric values. "
-               "A default value can be set in Advanced Settings."),
+        help=_(
+            'Defines when to randomize the variables specified in the associated Python script. '
+            'For problems that do not randomize values, specify \"Never\". '
+            'A default value can be set in Advanced Settings.'
+        ),
         default=RANDOMIZATION.NEVER,
         scope=Scope.settings,
         values=[
