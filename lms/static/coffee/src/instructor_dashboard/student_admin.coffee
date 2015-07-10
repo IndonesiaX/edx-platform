@@ -86,7 +86,11 @@ class @StudentAdmin
         data: unique_student_identifier: unique_student_identifier
         success: @clear_errors_then (data) ->
           window.location = data.progress_url
-        error: std_ajax_err => @$request_response_error_progress.text full_error_message
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
+          @$request_response_error_progress.text full_error_message
+        )
 
     # reset attempts for student on problem
     @$btn_reset_attempts_single.click =>
@@ -110,7 +114,11 @@ class @StudentAdmin
         url: @$btn_reset_attempts_single.data 'endpoint'
         data: send_data
         success: @clear_errors_then -> alert full_success_message
-        error: std_ajax_err => @$request_response_error_grade.text full_error_message
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
+          @$request_response_error_grade.text full_error_message
+        )
 
     # delete state for student on problem
     @$btn_delete_state_single.click =>
@@ -136,7 +144,11 @@ class @StudentAdmin
           url: @$btn_delete_state_single.data 'endpoint'
           data: send_data
           success: @clear_errors_then -> alert gettext('Module state successfully deleted.')
-          error: std_ajax_err => @$request_response_error_grade.text full_error_message
+          error: std_ajax_err((jqXHR) =>
+            if jqXHR.status == 401
+              window.location.reload()
+            @$request_response_error_grade.text full_error_message
+          )
       else
         # Clear error messages if "Cancel" was chosen on confirmation alert
         @clear_errors()
@@ -162,7 +174,11 @@ class @StudentAdmin
         url: @$btn_rescore_problem_single.data 'endpoint'
         data: send_data
         success: @clear_errors_then -> alert full_success_message
-        error: std_ajax_err => @$request_response_error_grade.text full_error_message
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
+          @$request_response_error_grade.text full_error_message
+        )
 
     # list task history for student+problem
     @$btn_task_history_single.click =>
@@ -184,7 +200,11 @@ class @StudentAdmin
         data: send_data
         success: @clear_errors_then (data) =>
           create_task_list_table @$table_task_history_single, data.tasks
-        error: std_ajax_err => @$request_response_error_grade.text full_error_message
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
+          @$request_response_error_grade.text full_error_message
+        )
 
    # reset entrance exam attempts for student
     @$btn_reset_entrance_exam_attempts.click =>
@@ -203,10 +223,13 @@ class @StudentAdmin
           success_message = gettext("Entrance exam attempts is being reset for student '{student_id}'.")
           full_success_message = interpolate_text(success_message, {student_id: unique_student_identifier})
           alert full_success_message
-        error: std_ajax_err =>
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
           error_message = gettext("Error resetting entrance exam attempts for student '{student_id}'. Make sure student identifier is correct.")
           full_error_message = interpolate_text(error_message, {student_id: unique_student_identifier})
           @$request_response_error_ee.text full_error_message
+        )
 
    # start task to rescore entrance exam for student
     @$btn_rescore_entrance_exam.click =>
@@ -313,7 +336,11 @@ class @StudentAdmin
           url: @$btn_reset_attempts_all.data 'endpoint'
           data: send_data
           success: @clear_errors_then -> alert full_success_message
-          error: std_ajax_err => @$request_response_error_all.text full_error_message
+          error: std_ajax_err((jqXHR) =>
+            if jqXHR.status == 401
+              window.location.reload()
+            @$request_response_error_all.text full_error_message
+          )
       else
         # Clear error messages if "Cancel" was chosen on confirmation alert
         @clear_errors()
@@ -339,7 +366,11 @@ class @StudentAdmin
           url: @$btn_rescore_problem_all.data 'endpoint'
           data: send_data
           success: @clear_errors_then -> alert full_success_message
-          error: std_ajax_err => @$request_response_error_all.text full_error_message
+          error: std_ajax_err((jqXHR) =>
+            if jqXHR.status == 401
+              window.location.reload()
+            @$request_response_error_all.text full_error_message
+          )
       else
         # Clear error messages if "Cancel" was chosen on confirmation alert
         @clear_errors()
@@ -358,7 +389,11 @@ class @StudentAdmin
         data: send_data
         success: @clear_errors_then (data) =>
           create_task_list_table @$table_task_history_all, data.tasks
-        error: std_ajax_err => @$request_response_error_all.text gettext("Error listing task history for this student and problem.")
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
+          @$request_response_error_all.text gettext("Error listing task history for this student and problem.")
+        )
 
   # wraps a function, but first clear the error displays
   clear_errors_then: (cb) ->

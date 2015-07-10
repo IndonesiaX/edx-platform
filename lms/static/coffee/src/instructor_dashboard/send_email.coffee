@@ -80,8 +80,11 @@ class SendEmail
             success: (data) =>
               @display_response success_message
 
-            error: std_ajax_err =>
+            error: std_ajax_err((jqXHR) =>
+              if jqXHR.status == 401
+                window.location.reload()
               @fail_with_error gettext('Error sending email.')
+            )
 
         else
           @$task_response.empty()
@@ -100,8 +103,11 @@ class SendEmail
             @$history_request_response_error.text gettext("There is no email history for this course.")
             # Enable the msg-warning css display
             @$history_request_response_error.css({"display":"block"})
-        error: std_ajax_err =>
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
           @$history_request_response_error.text gettext("There was an error obtaining email task history for this course.")
+        )
 
     # List content history for emails sent
     @$btn_task_history_email_content.click =>
@@ -116,8 +122,12 @@ class SendEmail
           else
             @$content_request_response_error.text gettext("There is no email history for this course.")
             @$content_request_response_error.css({"display":"block"})
-        error: std_ajax_err =>
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
           @$content_request_response_error.text gettext("There was an error obtaining email content history for this course.")
+        )
+
 
   fail_with_error: (msg) ->
     console.warn msg

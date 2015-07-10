@@ -410,8 +410,8 @@ class TestViewAuth(ModuleStoreTestCase, LoginEnrollmentTestCase):
         """
         self.login(self.org_instructor_user)
         url = reverse('instructor_dashboard', kwargs={'course_id': unicode(self.course.id)})
-        response = self.assert_request_status_code(302, url)
-        self.assertIn('sudo/?region=', response['location'])
+        response = self.assert_request_status_code(401, url)
+        self.assertIn('Unauthorized', response.content)
 
     def test_org_staff_cannot_access_without_sudo(self):
         """
@@ -420,8 +420,8 @@ class TestViewAuth(ModuleStoreTestCase, LoginEnrollmentTestCase):
         """
         self.login(self.org_staff_user)
         url = reverse('instructor_dashboard', kwargs={'course_id': unicode(self.course.id)})
-        response = self.assert_request_status_code(302, url)
-        self.assertIn('sudo/?region=', response['location'])
+        response = self.assert_request_status_code(401, url)
+        self.assertIn('Unauthorized', response.content)
 
 
 @attr('shard_1')

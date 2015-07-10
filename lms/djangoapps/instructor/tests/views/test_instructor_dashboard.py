@@ -254,5 +254,5 @@ class TestInstructorDashboard(ModuleStoreTestCase, LoginEnrollmentTestCase):
         # Logout to remove sudo access.
         self.client.logout()
         self.client.login(username=self.instructor.username, password="test")
-        response = self.client.get(self.url)
+        response = self.client.get(self.url, content_type='html', HTTP_ACCEPT='html')
         self.assertEqual(response.status_code, 302)

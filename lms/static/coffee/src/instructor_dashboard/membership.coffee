@@ -141,9 +141,12 @@ class AuthListWidget extends MemberListWidget
       url: @list_endpoint
       data: rolename: @rolename
       success: (data) => cb? null, data[@rolename]
-      error: std_ajax_err =>
-        `// Translators: A rolename appears this sentence. A rolename is something like "staff" or "beta tester".`
+      error: std_ajax_err((jqXHR) =>
+      # Translators: A rolename appears this sentence. A rolename is something like "staff" or "beta tester".
+        if jqXHR.status == 401
+            window.location.reload()
         cb? gettext("Error fetching list for role") + " '#{@rolename}'"
+        )
 
   # send ajax request to modify access
   # (add or remove them from the list)
@@ -158,7 +161,11 @@ class AuthListWidget extends MemberListWidget
         rolename: @rolename
         action: action
       success: (data) => @member_response data
-      error: std_ajax_err => cb? gettext "Error changing user's permissions."
+      error: std_ajax_err((jqXHR) =>
+        if jqXHR.status == 401
+            window.location.reload()
+        cb? gettext "Error changing user's permissions."
+        )
 
   member_response: (data) ->
     @clear_errors()
@@ -296,7 +303,12 @@ class BetaTesterBulkAddition
         url: @$btn_beta_testers.data 'endpoint'
         data: send_data
         success: (data) => @display_response data
-        error: std_ajax_err => @fail_with_error gettext "Error adding/removing users as beta testers."
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
+          @fail_with_error gettext "Error adding/removing users as beta testers."
+        )
+
 
   # clear the input text field
   clear_input: ->
@@ -395,8 +407,11 @@ class BatchEnrollment
         url: $(event.target).data 'endpoint'
         data: send_data
         success: (data) => @display_response data
-        error: std_ajax_err => @fail_with_error gettext "Error enrolling/unenrolling users."
-
+        error: std_ajax_err((jqXHR) =>
+          if jqXHR.status == 401
+            window.location.reload()
+          @fail_with_error gettext "Error enrolling/unenrolling users."
+        )
 
   # clear the input text field
   clear_input: ->
@@ -648,7 +663,12 @@ class AuthList
       url: @$display_table.data 'endpoint'
       data: rolename: @rolename
       success: load_auth_list
-      error: std_ajax_err => @$request_response_error.text "Error fetching list for '#{@rolename}'"
+      error: std_ajax_err((jqXHR) =>
+        if jqXHR.status == 401
+            window.location.reload()
+        @$request_response_error.text "Error fetching list for '#{@rolename}'"
+      )
+
 
 
   # slickgrid's layout collapses when rendered
@@ -670,7 +690,12 @@ class AuthList
         rolename: @rolename
         action: action
       success: (data) -> cb?(data)
-      error: std_ajax_err => @$request_response_error.text gettext "Error changing user's permissions."
+      error: std_ajax_err((jqXHR) =>
+        if jqXHR.status == 401
+          window.location.reload()
+        @$request_response_error.text gettext "Error changing user's permissions."
+      )
+
 
 
 # Membership Section

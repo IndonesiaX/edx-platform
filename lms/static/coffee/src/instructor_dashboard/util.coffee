@@ -297,7 +297,11 @@ class @PendingInstructorTasks
           @$no_tasks_message.empty()
           @$no_tasks_message.append $('<p>').text gettext("No tasks currently running.")
           @$no_tasks_message.show()
-      error: std_ajax_err => console.error "Error finding pending tasks to display"
+      error: std_ajax_err((jqXHR) =>
+        if jqXHR.status == 401
+          window.location.reload()
+        console.error "Error finding pending tasks to display"
+        )
     ### /Pending Instructor Tasks Section ####
 
 class KeywordValidator

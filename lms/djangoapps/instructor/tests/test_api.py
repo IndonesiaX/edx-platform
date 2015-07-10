@@ -322,7 +322,7 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
             self._access_endpoint(
                 endpoint,
                 args,
-                302,
+                401,
                 ""
             )
 
@@ -372,7 +372,7 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
             self._access_endpoint(
                 endpoint,
                 args,
-                302,
+                401,
                 ""
             )
 
@@ -380,7 +380,7 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
             self._access_endpoint(
                 endpoint,
                 args,
-                302,
+                401,
                 ""
             )
 

@@ -759,6 +759,7 @@ class DataDownloadPage(PageObject):
         return self.report_download_links.map(lambda el: el.text)
 
 
+# pylint: disable=invalid-name
 class StudentAdminPage(PageObject):
     """
     Student admin section of the Instructor dashboard.

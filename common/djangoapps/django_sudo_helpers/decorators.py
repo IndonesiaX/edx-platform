@@ -6,6 +6,7 @@ from functools import wraps
 from sudo.settings import RESET_TOKEN
 from sudo.utils import new_sudo_token_on_activity
 from sudo.views import redirect_to_sudo
+from util.json_request import JsonResponse
 
 
 def sudo_required(func_or_region):
@@ -38,6 +39,11 @@ def sudo_required(func_or_region):
 
             # N.B. region is captured from the enclosing sudo_required function
             if not request.is_sudo(region=region or course_specific_region):
+                response_format = request.REQUEST.get('format', 'html')
+                if (response_format == 'json' or
+                        'application/json' in request.META.get('HTTP_ACCEPT', 'application/json')):
+                    return JsonResponse({'error': 'Unauthorized'}, status=401)
+
                 return redirect_to_sudo(request.get_full_path(), region=region or course_specific_region)
 
             if RESET_TOKEN is True:

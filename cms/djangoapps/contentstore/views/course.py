@@ -75,7 +75,6 @@ from .item import create_xblock_info
 from contentstore.push_notification import push_notification_enabled
 from course_creators.views import get_course_creator_status, add_user_with_status_unrequested
 from contentstore import utils
-from sudo.utils import revoke_sudo_privileges
 from student.roles import (
     CourseInstructorRole, CourseStaffRole, CourseCreatorRole, GlobalStaff, UserBasedRole
 )
