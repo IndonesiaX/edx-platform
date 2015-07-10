@@ -77,12 +77,13 @@ class CourseUserInfo(object):
         self.is_course_staff = None
 
     @staticmethod
-    def load_from_course(user, course):
+    def load_from_course(user, course_key):
         """
         Arguments:
-            course (CourseDescriptor)
+            course (CourseKey)
 
         Returns:
             CourseUserInfo
         """
-        pass  # todo
+        # TODO: should this process be made part of the transformation pipeline?
+        pass  # TODO: write this

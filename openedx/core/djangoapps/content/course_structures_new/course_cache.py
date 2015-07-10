@@ -28,10 +28,10 @@ def _load_block_tree(block, block_map, parent_map, child_map):
             _load_block_tree(child, block_map, parent_map, child_map)
 
 
-def _get_block_cache_entries(course):
+def _get_block_cache_entries(root_block):
     """
     Arguments:
-        course (CourseDescriptor)
+        root_block (XBlock)
 
     Returns:
         dict[UsageKey: XBlockCacheEntry]: All blocks under root_block_key.
@@ -42,7 +42,7 @@ def _get_block_cache_entries(course):
     block_map = {}
     parent_map = {}
     child_map = {}
-    _load_block_tree(course, block_map, parent_map, child_map)
+    _load_block_tree(root_block, block_map, parent_map, child_map)
 
     # Define functions for traversing course hierarchy.
     get_children = lambda block: [
@@ -58,7 +58,7 @@ def _get_block_cache_entries(course):
     collected_data = {}
     for transformation in TRANSFORMATIONS:
         required_fields |= transformation.required_fields
-        collected_data[transformation.__name__] = transformation.collect(course, get_children, get_parents)
+        collected_data[transformation.__name__] = transformation.collect(root_block, get_children, get_parents)
 
     # Build a dictionary mapping usage keys to block information.
     return {
