@@ -428,6 +428,49 @@ class ExportTestCase(CourseTestCase):
         finally:
             shutil.rmtree(root_dir / name)
 
+    def test_library_import_then_export(self):
+        """
+        Verify that library exported after being imported first
+        """
+        library = LibraryFactory.create(modulestore=self.store)
+        lib_key = library.location.library_key
+        name = library.url_name
+
+        # import the library
+        extract_dir = path(tempfile.mkdtemp())
+        try:
+            tar = tarfile.open(path(TEST_DATA_DIR) / 'imports' / 'library.HhJfPD.tar.gz')
+            safetar_extractall(tar, extract_dir)
+            library_items = import_library_from_xml(
+                self.store,
+                self.user.id,
+                settings.GITHUB_REPO_ROOT,
+                [extract_dir / 'library'],
+                load_error_modules=False,
+                static_content_store=contentstore(),
+                target_id=lib_key
+            )
+        except IOError:
+            shutil.rmtree(extract_dir)
+
+        # verify library import correctly
+        self.assertEqual(lib_key, library_items[0].location.library_key)
+        library = self.store.get_library(lib_key)
+        children = [self.store.get_item(child).url_name for child in library.children]
+        self.assertEqual(len(children), 3)
+
+        # export library again
+        try:
+            export_library_to_xml(self.store, contentstore(), lib_key, extract_dir, name)
+            export_failed = False
+        except TypeError:
+            export_failed = True
+        finally:
+            shutil.rmtree(extract_dir)
+
+        # verify that library exported without any failures
+        self.assertFalse(export_failed)
+
     def test_export_success_with_custom_tag(self):
         """
         Verify that course export with customtag
