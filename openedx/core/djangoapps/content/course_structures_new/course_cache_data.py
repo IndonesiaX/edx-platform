@@ -1,10 +1,9 @@
 
 class XBlockCacheEntry(object):
 
-    def __init__(self, usage_key, parent_keys, child_keys, block_fields, transformation_data):
+    def __init__(self, parent_keys, child_keys, block_fields, transformation_data):
         """
         Arguments:
-            usage_key (UsageKey)
             parent_keys (list[UsageKey])
             child_keys (list[UsageKey])
             block_fields (dict[str: *])
@@ -16,7 +15,6 @@ class XBlockCacheEntry(object):
                     ...
                 }
         """
-        self.usage_key = usage_key
         self.parent_keys = parent_keys
         self.child_keys = child_keys
         self.block_fields = block_fields
@@ -41,14 +39,12 @@ class XBlockCacheEntry(object):
 
 class XBlockInformation(object):
 
-    def __init__(self, usage_key, child_keys, block_fields):
+    def __init__(self, child_keys, block_fields):
         """
         Arguments:
-            usage_key (UsageKey)
             child_keys (list[UsageKey])
             block_fields (dict[str: *])
         """
-        self.usage_key = usage_key
         self.child_keys = child_keys
         self.block_fields = block_fields
 
@@ -62,7 +58,6 @@ class XBlockInformation(object):
             XBlockInformation
         """
         return XBlockInformation(
-            block_cache_entry.usage_key,
             block_cache_entry.child_keys,
             block_cache_entry.block_fields
         )
@@ -86,4 +81,4 @@ class CourseUserInfo(object):
             CourseUserInfo
         """
         # TODO: should this process be made part of the transformation pipeline?
-        pass  # TODO: write this
+        return CourseUserInfo()  # TODO: write this
