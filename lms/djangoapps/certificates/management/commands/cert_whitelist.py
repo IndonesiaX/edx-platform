@@ -25,6 +25,7 @@ def get_user(username):
 
 class Command(BaseCommand):
 
+
     help = """
     Sets or gets the certificate whitelist for a given
     user/course
