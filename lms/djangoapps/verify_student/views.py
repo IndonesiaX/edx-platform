@@ -268,21 +268,15 @@ class PayAndVerifyView(View):
         # the user is trying to purchase.
         #
         # Nonethless, for the time being we continue to make the really ugly assumption
-        # that there is either (a) exactly one paid mode or at least (b) an expired
-        # verified mode (if the user is going through verification).
-        expired_verified_course_mode, unexpired_paid_course_mode = self._get_expired_verified_and_paid_mode(course_key)
-        relevant_course_mode = (
-            unexpired_paid_course_mode
-            if unexpired_paid_course_mode is not None
-            else expired_verified_course_mode
-        )
+        # that at some point there was a paid course mode we can query for the price.
+        relevant_course_mode = self._get_paid_mode(course_key)
 
         # If we can find a relevant course mode, then log that we're entering the flow
         # Otherwise, this course does not support payment/verification, so respond with a 404.
         if relevant_course_mode is not None:
             if CourseMode.is_verified_mode(relevant_course_mode):
                 log.info(
-                    u"Entering verified workflow for user '%s', course '%s', with current step '%s'.",
+                    u"Entering payment and verification flow for user '%s', course '%s', with current step '%s'.",
                     request.user.id, course_id, current_step
                 )
             else:
@@ -297,6 +291,17 @@ class PayAndVerifyView(View):
                 u"No paid/verified course mode found for course '%s' for verification/payment flow request",
                 course_id
             )
+            raise Http404
+
+        # If the user is trying to *pay* and the upgrade deadline has passed,
+        # then they shouldn't be able to enter the flow.
+        user_is_trying_to_pay = message in [self.FIRST_TIME_VERIFY_MSG, self.UPGRADE_MSG]
+        upgrade_deadline_passed = (
+            relevant_course_mode.expiration_datetime and
+            relevant_course_mode.expiration_datetime < datetime.datetime.now(UTC)
+        )
+        if user_is_trying_to_pay and upgrade_deadline_passed:
+            log.warn("TODO")
             raise Http404
 
         # Check whether the user has verified, paid, and enrolled.
@@ -472,41 +477,32 @@ class PayAndVerifyView(View):
         if url is not None:
             return redirect(url)
 
-    def _get_expired_verified_and_paid_mode(self, course_key):  # pylint: disable=invalid-name
-        """Retrieve expired verified mode and unexpired paid mode(with min_price>0) for a course.
+    def _get_paid_mode(self, course_key):
+        """
+        TODO
 
         Arguments:
             course_key (CourseKey): The location of the course.
 
         Returns:
-            Tuple of `(expired_verified_mode, unexpired_paid_mode)`.  If provided,
-                `expired_verified_mode` is an *expired* verified mode for the course.
-                If provided, `unexpired_paid_mode` is an *unexpired* paid(with min_price>0)
-                mode for the course.  Either of these may be None.
+            TODO
 
         """
         # Retrieve all the modes at once to reduce the number of database queries
         all_modes, unexpired_modes = CourseMode.all_and_unexpired_modes_for_courses([course_key])
 
-        # Unexpired paid modes
-        unexpired_paid_modes = [mode for mode in unexpired_modes[course_key] if mode.min_price]
-        if len(unexpired_paid_modes) > 1:
-            # There is more than one paid mode defined,
-            # so choose the first one.
-            log.warn(
-                u"More than one paid modes are defined for course '%s' choosing the first one %s",
-                course_key, unexpired_paid_modes[0]
-            )
-        unexpired_paid_mode = unexpired_paid_modes[0] if unexpired_paid_modes else None
+        # Retrieve the first unexpired, paid mode, if there is one
+        for mode in unexpired_modes[course_key]:
+            if mode.min_price > 0:
+                return mode
 
-        # Find an unexpired verified mode
-        verified_mode = CourseMode.verified_mode_for_course(course_key, modes=unexpired_modes[course_key])
-        expired_verified_mode = None
+        # Otherwise, find the first expired mode
+        for mode in all_modes[course_key]:
+            if mode.min_price > 0:
+                return mode
 
-        if verified_mode is None:
-            expired_verified_mode = CourseMode.verified_mode_for_course(course_key, modes=all_modes[course_key])
-
-        return (expired_verified_mode, unexpired_paid_mode)
+        # Otherwise, return None and so the view knows to respond with a 404.
+        return None
 
     def _display_steps(self, always_show_payment, already_verified, already_paid, course_mode):
         """Determine which steps to display to the user.
