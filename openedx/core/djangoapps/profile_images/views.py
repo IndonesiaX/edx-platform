@@ -37,18 +37,18 @@ def _make_upload_dt():
 
 class ProfileImageUploadView(APIView):
     """
-    **Use Cases**
+    **Use Case**
 
         * Upload an image for the user's profile.
 
           The requesting user must be signed in. The signed in user can only
           upload his or her own profile image.
 
-    **Example Requests**
+    **Example Request**
 
         POST /api/profile_images/v1/{username}/upload
 
-    **Response for POST**
+    **Example Responses**
 
         When the requesting user tries to upload the image for a different user, the 
         request returns one of the following responses.
@@ -124,7 +124,7 @@ class ProfileImageUploadView(APIView):
 
 class ProfileImageRemoveView(APIView):
     """
-    **Use Cases**
+    **Use Case**
 
         * Remove all of the profile images associated with the user's account.
 
@@ -139,7 +139,7 @@ class ProfileImageRemoveView(APIView):
 
         POST /api/profile_images/v1/{username}/remove
 
-    **Response for POST**
+    **Example Responses**
 
         When the requesting user tries to remove the profile image for a different user, the 
         request returns one of the following responses.

@@ -74,7 +74,7 @@ class EnrollmentUserThrottle(UserRateThrottle, ApiKeyPermissionMixIn):
 @can_disable_rate_limit
 class EnrollmentView(APIView, ApiKeyPermissionMixIn):
     """
-        **Use Cases**
+        **Use Case**
 
             Get the user's enrollment status for a course.
 
@@ -292,12 +292,16 @@ class EnrollmentListView(APIView, ApiKeyPermissionMixIn):
               This command can use a server-to-server call to enroll a user in
               other modes, such as "verified", "professional", or "credit". If
               the mode is not supported for the course, the request will fail
-              and return the available modes
+              and return the available modes.
 
-              You can include other parameters as enrollment attributes for
-              specific course mode as needed. For example, for credit mode, you
-              can include parameters namespace:'credit', name:'provider_id',
-              value:'UniversityX' to specify credit provider attribute.
+              You can include other parameters as enrollment attributes for a
+              specific course mode. For example, for credit mode, you can
+              include the following parameters to specify the credit provider
+              attribute.
+
+              * namespace: credit
+              * name: provider_id
+              * value: institution_name
 
         **Example Requests**
 
@@ -311,52 +315,71 @@ class EnrollmentListView(APIView, ApiKeyPermissionMixIn):
             
             }
 
-            A POST request can include the following parameters.
+            **POST Parameters**
 
-            * user:  The username of the currently logged in user. Optional.
-              You cannot use the command to enroll a different user.
+              A POST request can include the following parameters.
 
-            * mode: The Course Mode for the enrollment. Individual users cannot upgrade their enrollment mode from
-              'honor'. Only server-to-server requests can enroll with other modes. Optional.
+              * user: The username of the currently logged in user. Optional.
+                You cannot use the command to enroll a different user.
 
-            * is_active: A Boolean indicating whether the enrollment is active. Only server-to-server requests are
-              allowed to deactivate an enrollment. Optional.
+              * mode: The course mode for the enrollment. Individual users
+                cannot upgrade their enrollment mode from 'honor'. Only
+                server-to-server requests can enroll with other modes.
+                Optional.
 
-            * course details: A collection that includes the following
-              information.
+              * is_active: A Boolean value indicating whether the enrollment
+                is active. Only server-to-server requests are allowed to
+                deactivate an enrollment. Optional.
 
-                * course_id: The unique identifier for the course.
+              * course details: A collection that includes the following
+                information.
 
-            * email_opt_in: Optional. A Boolean value that indicates whether
-              the user wants to receive email from the organization that runs
-              this course.
+                  * course_id: The unique identifier for the course.
 
-            * enrollment_attributes: A list of dictionary that contains:
+              * email_opt_in: Optional. A Boolean value that indicates whether
+                the user wants to receive email from the organization that runs
+                this course.
 
-                * namespace: Namespace of the attribute
-                * name: Name of the attribute
-                * value: Value of the attribute
+              * enrollment_attributes: A list of dictionary that contains:
 
-            * is_active: Optional. A Boolean value that indicates whether the
-              enrollment is active. Only server-to-server requests can
-              deactivate an enrollment.
+                  * namespace: Namespace of the attribute
+                  * name: Name of the attribute
+                  * value: Value of the attribute
 
-            * mode: Optional. The course mode for the enrollment. Individual
-              users cannot upgrade their enrollment mode from "honor". Only
-              server-to-server requests can enroll with other modes.
-            
-            * user: Optional. The user ID of the currently logged in user. You
-              cannot use the command to enroll a different user.
+              * is_active: Optional. A Boolean value that indicates whether the
+                enrollment is active. Only server-to-server requests can
+                deactivate an enrollment.
 
-        **Response Values**
+              * mode: Optional. The course mode for the enrollment. Individual
+                users cannot upgrade their enrollment mode from "honor". Only
+                server-to-server requests can enroll with other modes.
+              
+              * user: Optional. The user ID of the currently logged in user. You
+                cannot use the command to enroll a different user.
 
-            If honor mode is not supported for the course, an HTTP x "Message"
-            response is returned along with the available course modes.
+        **GET Response Values**
 
-            This command can use a server-to-server call to enroll a user in
-            other modes, such as "verified" or "professional". If the
-            specified mode is not supported for the course, an HTTP x
-            "Message" response is returned along with the available modes.
+            If an unspecified error occurs when the user tries to obtain a
+            learner's enrollments, the request returns an HTTP 400 "Bad
+            Request" response.
+
+            If the user does not have permission to view enrollment data for
+            the requested learner, the request returns an HTTP 404 "Not Found"
+            response.
+
+        **POST Response Values**
+
+             If the user does not specify a course ID, the specified course
+             does not exist, or the is_active status is invalid, the request
+             returns an HTTP 400 "Bad Request" response.
+
+             If a user who is not an admin tries to upgrade a learner's course
+             mode, the request returns an HTTP 403 "Forbidden" response.
+
+             If the specified user does not exist, the request returns an HTTP
+             406 "Not Acceptable" response.
+
+        **GET and POST Response Values**
 
             If the request is successful, an HTTP 200 "OK" response is
             returned along with a collection of course enrollments for the
@@ -418,7 +441,7 @@ class EnrollmentListView(APIView, ApiKeyPermissionMixIn):
 
              * mode: The enrollment mode of the user in this course.
 
-             * user: The username of the user. of the user.
+             * user: The username of the user.
     """
     authentication_classes = OAuth2AuthenticationAllowInactiveUser, EnrollmentCrossDomainSessionAuth
     permission_classes = ApiKeyHeaderPermissionIsAuthenticated,

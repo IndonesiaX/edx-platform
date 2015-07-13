@@ -39,13 +39,13 @@ class PreferencesView(APIView):
 
             PATCH /api/user/v1/preferences/{username}/ with content_type "application/merge-patch+json"
 
-        **Response for GET**
+        **Response Values for GET**
 
             If no user exists with the specified username, an HTTP 404 "Not
             Found" response is returned.
 
             If a user without "is_staff" access requests preferences for a
-            different user, a 404 error is returned.
+            different user, an HTTP 404 "Not Found" message is returned.
 
             If the user makes the request for her own account, or makes a
             request for another account and has "is_staff" access, an HTTP 200
@@ -60,7 +60,7 @@ class PreferencesView(APIView):
             * pref-lan: The user's preferred language, as set in account
               settings.
 
-        **Response for PATCH**
+        **Response Values for PATCH**
 
             Users can only modify their own preferences. If the
             requesting user does not have the specified username and has staff
@@ -180,7 +180,7 @@ class PreferencesDetailView(APIView):
             If the request is successful, a 204 "No Content" status is returned
             with no additional content.
 
-        **Response for DELETE**
+        **Response Values for DELETE**
 
             Users can only delete their own preferences. If the
             requesting user does not have the specified username and has staff

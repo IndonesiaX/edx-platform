@@ -17,7 +17,7 @@ Upload a Profile Image
 
 .. autoclass:: profile_images.views.ProfileImageUploadView
 
-**Example response**
+**Example Response**
 
 .. code-block:: json
 
@@ -33,7 +33,7 @@ Remove a Profile Image
 
 .. autoclass:: profile_images.views.ProfileImageRemoveView
 
-**Example response**
+**Example Response**
 
 .. code-block:: json
 

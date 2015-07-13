@@ -33,13 +33,13 @@ class UserDetail(generics.RetrieveAPIView):
     """
     **Use Case**
 
-        Get information about the specified user and
-        access other resources the user has permissions for.
+        Get information about the specified user and access other resources
+        the user has permissions for.
 
         Users are redirected to this endpoint after they sign in.
 
-        You can use the **course_enrollments** value in
-        the response to get a list of courses the user is enrolled in.
+        You can use the **course_enrollments** value in the response to get a
+        list of courses the user is enrolled in.
 
     **Example Request**
 
@@ -79,12 +79,16 @@ class UserCourseStatus(views.APIView):
 
         PATCH /api/mobile/v0.5/users/{username}/course_status_info/{course_id}
 
-            body:
-                last_visited_module_id={module_id}
-                modification_date={date}
+        **PATCH Parameters**
+           
+          The body of the PATCH request can include the following parameters. 
+          
+          * last_visited_module_id={module_id}
+          * modification_date={date}
 
-            The modification_date is optional. If it is present, the update will only take effect
-            if the modification_date is later than the modification_date saved on the server.
+            The modification_date parameter is optional. If it is present, the
+            update will only take effect if the modification_date in the
+            request is later than the modification_date saved on the server.
 
     **Response Values**
 

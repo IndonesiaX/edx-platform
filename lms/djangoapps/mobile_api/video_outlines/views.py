@@ -96,7 +96,7 @@ class VideoTranscripts(generics.RetrieveAPIView):
 
         Get a transcript for a specified video and language.
 
-    **Example request**:
+    **Example request**
 
         GET /api/mobile/v0.5/video_outlines/transcripts/{organization}/{course_number}/{course_run}/{video ID}/{language code}
 
