@@ -23,8 +23,8 @@ def get_user(username):
         user = User.objects.get(username=username)
     return user
 
-class Command(BaseCommand):
 
+class Command(BaseCommand):
 
     help = """
     Sets or gets the certificate whitelist for a given
