@@ -662,11 +662,11 @@ class TestPayAndVerifyView(UrlResetMixin, ModuleStoreTestCase):
 
         # Enter the verification part of the flow
         # Expect that we are able to verify
-        response = self._get_page("verify_student_verify_now")
+        response = self._get_page("verify_student_verify_now", course.id)
         self.assertNotContains(response, "Verification is no longer available")
 
         data = self._get_page_data(response)
-        self.assertEqual(data['msg-key'], PayAndVerifyView.VERIFY_NOW_MSG)
+        self.assertEqual(data['message_key'], PayAndVerifyView.VERIFY_NOW_MSG)
 
     def test_course_mode_not_expired_verification_deadline_passed(self):
         course = self._create_course("verified")

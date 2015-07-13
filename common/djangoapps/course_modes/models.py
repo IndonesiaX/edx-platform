@@ -217,7 +217,7 @@ class CourseMode(models.Model):
         return modes
 
     @classmethod
-    def modes_for_course_dict(cls, course_id, modes=None, only_selectable=True):
+    def modes_for_course_dict(cls, course_id, modes=None, **kwargs):
         """Returns the non-expired modes for a particular course.
 
         Arguments:
@@ -227,6 +227,9 @@ class CourseMode(models.Model):
             modes (list of `Mode`): If provided, search through this list
                 of course modes.  This can be used to avoid an additional
                 database query if you have already loaded the modes list.
+
+            include_expired (bool): If True, expired course modes will be included
+                in the returned values. If False, these modes will be omitted.
 
             only_selectable (bool): If True, include only modes that are shown
                 to users on the track selection page.  (Currently, "credit" modes
@@ -238,7 +241,7 @@ class CourseMode(models.Model):
 
         """
         if modes is None:
-            modes = cls.modes_for_course(course_id, only_selectable=only_selectable)
+            modes = cls.modes_for_course(course_id, **kwargs)
 
         return {mode.slug: mode for mode in modes}
 
