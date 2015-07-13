@@ -91,6 +91,9 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
             'display_name_with_default',
             'start_date_is_still_default',
             'pre_requisite_courses',
+            'enrollment_domain',
+            'invitation_only',
+            'max_student_enrollments_allowed',
         ]
         for attribute_name in fields_to_test:
             course_value = getattr(course, attribute_name)
@@ -125,24 +128,38 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         # resulting values are often off by fractions of a second. So, as a
         # workaround, we simply test if the start and end times are the same
         # number of seconds from the Unix epoch.
-        others_to_test = [(
-            course_image_url(course),
-            course_overview_cache_miss.course_image_url,
-            course_overview_cache_hit.course_image_url
-        ), (
-            get_active_web_certificate(course) is not None,
-            course_overview_cache_miss.has_any_active_web_certificate,
-            course_overview_cache_hit.has_any_active_web_certificate
-
-        ), (
-            get_seconds_since_epoch(course.start),
-            get_seconds_since_epoch(course_overview_cache_miss.start),
-            get_seconds_since_epoch(course_overview_cache_hit.start),
-        ), (
-            get_seconds_since_epoch(course.end),
-            get_seconds_since_epoch(course_overview_cache_miss.end),
-            get_seconds_since_epoch(course_overview_cache_hit.end),
-        )]
+        others_to_test = [
+            (
+                course_image_url(course),
+                course_overview_cache_miss.course_image_url,
+                course_overview_cache_hit.course_image_url
+            ),
+            (
+                get_active_web_certificate(course) is not None,
+                course_overview_cache_miss.has_any_active_web_certificate,
+                course_overview_cache_hit.has_any_active_web_certificate
+            ),
+            (
+                get_seconds_since_epoch(course.start),
+                get_seconds_since_epoch(course_overview_cache_miss.start),
+                get_seconds_since_epoch(course_overview_cache_hit.start),
+            ),
+            (
+                get_seconds_since_epoch(course.end),
+                get_seconds_since_epoch(course_overview_cache_miss.end),
+                get_seconds_since_epoch(course_overview_cache_hit.end),
+            ),
+            (
+                get_seconds_since_epoch(course.enrollment_start),
+                get_seconds_since_epoch(course_overview_cache_miss.enrollment_start),
+                get_seconds_since_epoch(course_overview_cache_hit.enrollment_start),
+            ),
+            (
+                get_seconds_since_epoch(course.enrollment_end),
+                get_seconds_since_epoch(course_overview_cache_miss.enrollment_end),
+                get_seconds_since_epoch(course_overview_cache_hit.enrollment_end),
+            ),
+        ]
         for (course_value, cache_miss_value, cache_hit_value) in others_to_test:
             self.assertEqual(course_value, cache_miss_value)
             self.assertEqual(cache_miss_value, cache_hit_value)
