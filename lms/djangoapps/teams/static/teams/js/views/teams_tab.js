@@ -135,14 +135,29 @@
                                    }
                                }
                            });
-                           teamCollection.goTo(1);
-                           this.teamsView = new ViewWithHeader({
-                               header: headerView,
-                               main: new TeamsView({collection: teamCollection})
+                           teamCollection.goTo(1, {
+                               success: function (collection) {
+                                   self.mainView = self.teamsView = new ViewWithHeader({
+                                       header: headerView,
+                                       main: new TeamsView({collection: collection})
+                                   });
+                                   self.render();
+                               },
+                               error: function (collection, response) {
+                                   if (response.status === 400) {
+                                       self.topicNotFound(topicID);
+                                   }
+                                   else if (response.status === 404) {
+                                       // TODO figure out error messages
+                                       console.log('no teams for topic: ' + topicID)
+                                   }
+                               }
                            });
                        }
-                       this.mainView = this.teamsView;
-                       this.render();
+                       else {
+                           this.mainView = this.teamsView;
+                           this.render();
+                       }
                     },
 
                    /**
