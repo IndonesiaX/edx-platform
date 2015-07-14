@@ -104,7 +104,7 @@
                                url: this.teams_url,
                                topic_id: topicID,
                                per_page: 5 // TODO determine the right number
-                           }).bootstrap(),
+                           }),
                                topic = this.topicsCollection.findWhere({'id': topicID}),
                                self = this,
                                headerView;
