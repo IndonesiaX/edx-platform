@@ -71,21 +71,16 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
 
     def verify_access(self, mock_unit, student_should_have_access, expected_error_type=None):
         """ Verify the expected result from _has_access_descriptor """
-        self.assertEqual(
-            student_should_have_access,
-            bool(access._has_access_descriptor(
-                self.anonymous_user, 'load', mock_unit, course_key=self.course.course_key))
-        )
+        response = access._has_access_descriptor(self.anonymous_user, 'load',
+                                                 mock_unit, course_key=self.course.course_key)
+        self.assertEqual(student_should_have_access, bool(response))
+
+        if expected_error_type is not None:
+            self.assertIsInstance(response, expected_error_type)
 
         self.assertTrue(
             access._has_access_descriptor(self.course_staff, 'load', mock_unit, course_key=self.course.course_key)
         )
-
-        if expected_error_type is not None:
-            self.assertIsInstance(
-                access._has_access_descriptor(self.anonymous_user, 'load', mock_unit,
-                                              course_key=self.course.course_key),
-                expected_error_type)
 
     def verify_start_message(self, mock_unit, expected_start_message):
         self.assertEquals(
@@ -155,18 +150,15 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
     def test__has_access_error_desc(self, action, expected_student, expected_staff, expected_instructor):
         descriptor = Mock()
 
-        self.assertEquals(
-            bool(access._has_access_error_desc(self.student, action, descriptor, self.course.course_key)),
-            expected_student
-        )
-        self.assertEquals(
-            bool(access._has_access_error_desc(self.course_staff, action, descriptor, self.course.course_key)),
-            expected_staff
-        )
-        self.assertEquals(
-            bool(access._has_access_error_desc(self.course_instructor, action, descriptor, self.course.course_key)),
-            expected_instructor
-        )
+        for (user, expected_response) in (
+                (self.student, expected_student),
+                (self.course_staff, expected_staff),
+                (self.course_instructor, expected_instructor)
+        ):
+            self.assertEquals(
+                bool(access._has_access_error_desc(user, action, descriptor, self.course.course_key)),
+                expected_response
+            )
 
         with self.assertRaises(ValueError):
             access._has_access_error_desc(self.course_instructor, 'not_load_or_staff', descriptor, self.course.course_key)
@@ -184,19 +176,20 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
             access._has_access_descriptor(user, 'not_load_or_staff', descriptor)
 
     @ddt.data(
-        (True, None, False, access_response.VisibilityError),
-        (False, None, True),
-        (True, YESTERDAY, False, access_response.VisibilityError),
-        (False, YESTERDAY, True),
-        (True, TOMORROW, False, access_response.VisibilityError),
-        (False, TOMORROW, False, access_response.StartDateError)
+        (True, None, access_response.VisibilityError),
+        (False, None),
+        (True, YESTERDAY, access_response.VisibilityError),
+        (False, YESTERDAY),
+        (True, TOMORROW, access_response.VisibilityError),
+        (False, TOMORROW, access_response.StartDateError)
     )
     @ddt.unpack
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
-    def test__has_access_descriptor_staff_lock(self, staff_lock, start, expected_access, expected_error_type=None):
+    def test__has_access_descriptor_staff_lock(self, staff_lock, start, expected_error_type=None):
         """
         Tests that "visible_to_staff_only" overrides start date.
         """
+        expected_access = True if expected_error_type is None else False
         mock_unit = Mock(user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
         mock_unit.visible_to_staff_only = staff_lock
@@ -227,17 +220,18 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.verify_access(mock_unit, True)
 
     @ddt.data(
-        (None, True),
-        (YESTERDAY, True),
-        (TOMORROW, False, access_response.StartDateError)
-    )
+        (TOMORROW, access_response.StartDateError),
+        (None, None),
+        (YESTERDAY, None)
+    )  # ddt throws an error if I don't put the None argument there
     @ddt.unpack
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
     @patch('courseware.access.get_current_request_hostname', Mock(return_value='localhost'))
-    def test__has_access_descriptor_when_not_in_preview_mode(self, start, expected_access, expected_error_type=None):
+    def test__has_access_descriptor_when_not_in_preview_mode(self, start, expected_error_type):
         """
         Tests that descriptor has no access when start date in future & without preview.
         """
+        expected_access = True if expected_error_type is None else False
         mock_unit = Mock(user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
         mock_unit.visible_to_staff_only = False
@@ -365,14 +359,14 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         (False, False, True)
     )
     @ddt.unpack
-    def test__access_on_mobile(self, mobile, student_expected, staff_expected):
+    def test__access_on_mobile(self, mobile_available, student_expected, staff_expected):
         """
         Test course access on mobile for staff and students.
         """
         descriptor = Mock(user_partitions=[])
         descriptor._class_tags = {}
         descriptor.visible_to_staff_only = False
-        descriptor.mobile_available = mobile
+        descriptor.mobile_available = mobile_available
 
         self.assertEqual(
             bool(access._has_access_course_desc(self.student, 'load_mobile', descriptor)),

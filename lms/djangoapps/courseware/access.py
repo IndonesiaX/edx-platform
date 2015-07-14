@@ -181,10 +181,14 @@ def _can_access_descriptor_with_start_date(user, descriptor, course_key):  # pyl
             descriptor,
             course_key=course_key
         )
-        if descriptor.start is None or now > effective_start or in_preview_mode():
+        if (
+            descriptor.start is None
+            or now > effective_start
+            or in_preview_mode()
+        ):
             return ACCESS_GRANTED
 
-        return StartDateError("{:%B %d, %Y}".format(descriptor.start))
+        return StartDateError(descriptor.start)
 
 
 def _can_view_courseware_with_prerequisites(user, course):  # pylint: disable=invalid-name
@@ -201,14 +205,14 @@ def _can_view_courseware_with_prerequisites(user, course):  # pylint: disable=in
             represents a course and has the attributes .location and .id.
     """
 
-    def _check_if_prerequisites_enabled():
+    def _is_prerequisites_disabled():
         """
-        Checks if prerequisites are enabled in the settings.
+        Checks if prerequisites are disabled in the settings.
         """
         return ACCESS_DENIED if settings.FEATURES['ENABLE_PREREQUISITE_COURSES'] else ACCESS_GRANTED
 
     return (
-        _check_if_prerequisites_enabled()
+        _is_prerequisites_disabled()
         or _has_staff_access_to_descriptor(user, course, course.id)
         or user.is_anonymous()
         or _has_fulfilled_prerequisites(user, [course.id])
@@ -235,7 +239,7 @@ def _can_load_course_on_mobile(user, course):
         is_mobile_available_for_user(user, course) and
         (
             _has_staff_access_to_descriptor(user, course, course.id) or
-            _has_fulfilled_all_milestones(course.id, user.id)
+            _has_fulfilled_all_milestones(user, course.id)
         )
     )
 
@@ -351,10 +355,10 @@ def _has_access_course_desc(user, action, course):
         In this case we use the catalog_visibility property on the course descriptor
         but also allow course staff to see this.
         """
-        return ACCESS_GRANTED if (
-            course.catalog_visibility == CATALOG_VISIBILITY_CATALOG_AND_ABOUT or
-            _has_staff_access_to_descriptor(user, course, course.id)
-        ) else ACCESS_DENIED
+        return (
+            _has_catalog_visibility(course, CATALOG_VISIBILITY_CATALOG_AND_ABOUT)
+            or _has_staff_access_to_descriptor(user, course, course.id)
+        )
 
     def can_see_about_page():
         """
@@ -362,11 +366,11 @@ def _has_access_course_desc(user, action, course):
         In this case we use the catalog_visibility property on the course descriptor
         but also allow course staff to see this.
         """
-        return ACCESS_GRANTED if (
-            course.catalog_visibility == CATALOG_VISIBILITY_CATALOG_AND_ABOUT or
-            course.catalog_visibility == CATALOG_VISIBILITY_ABOUT or
-            _has_staff_access_to_descriptor(user, course, course.id)
-        ) else ACCESS_DENIED
+        return (
+            _has_catalog_visibility(course, CATALOG_VISIBILITY_CATALOG_AND_ABOUT)
+            or _has_catalog_visibility(course, CATALOG_VISIBILITY_ABOUT)
+            or _has_staff_access_to_descriptor(user, course, course.id)
+        )
 
     checkers = {
         'load': can_load,
@@ -396,14 +400,12 @@ def _can_load_course_overview(user, course_overview):
         The user doesn't have to be enrolled in the course in order to have load
         load access.
     """
-    return (
-        _has_staff_access_to_descriptor(user, course_overview, course_overview.id) or
-        (
-            _visible_to_nonstaff_users(course_overview)
-            and _can_access_descriptor_with_start_date(user, course_overview, course_overview.id)
-        )
+    response = (
+        _visible_to_nonstaff_users(course_overview)
+        and _can_access_descriptor_with_start_date(user, course_overview, course_overview.id)
     )
 
+    return response if response else _has_staff_access_to_descriptor(user, course_overview, course_overview.id)
 
 _COURSE_OVERVIEW_CHECKERS = {
     'load': _can_load_course_overview,
@@ -536,14 +538,16 @@ def _has_access_descriptor(user, action, descriptor, course_key=None):
         students to see modules.  If not, views should check the course, so we
         don't have to hit the enrollments table on every module load.
         """
-        return _has_staff_access_to_descriptor(user, descriptor, course_key) or (
+        response = (
             _visible_to_nonstaff_users(descriptor)
             and _has_group_access(descriptor, user, course_key)
-            and (
+            and
+            (
                 _has_detached_class_tag(descriptor)
                 or _can_access_descriptor_with_start_date(user, descriptor, course_key)
             )
         )
+        return response if response else _has_staff_access_to_descriptor(user, descriptor, course_key)
 
     checkers = {
         'load': can_load,
@@ -706,14 +710,14 @@ def _has_staff_access_to_location(user, location, course_key=None):
 
 
 def _has_access_to_course(user, access_level, course_key):
-    '''
+    """
     Returns True if the given user has access_level (= staff or
     instructor) access to the course with the given course_key.
     This ensures the user is authenticated and checks if global staff or has
     staff / instructor access.
 
     access_level = string, either "staff" or "instructor"
-    '''
+    """
     if user is None or (not user.is_authenticated()):
         debug("Deny: no user or anon user")
         return ACCESS_DENIED
@@ -769,27 +773,27 @@ def _has_staff_access_to_descriptor(user, descriptor, course_key):
     return _has_staff_access_to_location(user, descriptor.location, course_key)
 
 
-def _visible_to_nonstaff_users(obj):
+def _visible_to_nonstaff_users(descriptor):
     """
-    Returns if the object is visible to staff only.
+    Returns if the object is visible to nonstaff users.
 
     Arguments:
-        obj: CourseOverview or CourseDescriptor to check
+        descriptor (CourseOverview or CourseDescriptor): object to check
     """
-    return VisibilityError() if obj.visible_to_staff_only else ACCESS_GRANTED
+    return VisibilityError() if descriptor.visible_to_staff_only else ACCESS_GRANTED
 
 
-def _has_detached_class_tag(obj):
+def _has_detached_class_tag(descriptor):
     """
-    Returns if the given object has detached as a class tag.
+    Returns if the given descriptor's type is marked as detached.
 
     Arguments:
-        obj: object to check
+        descriptor (Descriptor): object to check
     """
-    return ACCESS_GRANTED if 'detached' in obj._class_tags else ACCESS_DENIED  # pylint: disable=protected-access
+    return ACCESS_GRANTED if 'detached' in descriptor._class_tags else ACCESS_DENIED  # pylint: disable=protected-access
 
 
-def _has_fulfilled_all_milestones(course_id, user_id):
+def _has_fulfilled_all_milestones(user, course_id):
     """
     Returns whether the given user has fulfilled all milestones for the
     given course.
@@ -798,7 +802,7 @@ def _has_fulfilled_all_milestones(course_id, user_id):
         course_id: ID of the course to check
         user_id: ID of the user to check
     """
-    return MilestoneError() if any_unfulfilled_milestones(course_id, user_id) else ACCESS_GRANTED
+    return MilestoneError() if any_unfulfilled_milestones(course_id, user.id) else ACCESS_GRANTED
 
 
 def _has_fulfilled_prerequisites(user, course_id):
@@ -813,6 +817,20 @@ def _has_fulfilled_prerequisites(user, course_id):
     return MilestoneError() if get_pre_requisite_courses_not_completed(user, course_id) else ACCESS_GRANTED
 
 
+def _has_catalog_visibility(course, visibility_type):
+    """
+    Returns whether the given course has the given visibility type
+    """
+    return ACCESS_GRANTED if course.catalog_visibility == visibility_type else ACCESS_DENIED
+
+
+def _is_descriptor_mobile_available(descriptor):
+    """
+    Returns if descriptor is available on mobile.
+    """
+    return ACCESS_GRANTED if descriptor.mobile_available else MobileAvailabilityError()
+
+
 def is_mobile_available_for_user(user, descriptor):
     """
     Returns whether the given course is mobile_available for the given user.
@@ -822,11 +840,11 @@ def is_mobile_available_for_user(user, descriptor):
     Arguments:
         descriptor (CourseDescriptor|CourseOverview): course or overview of course in question
     """
-    return ACCESS_GRANTED if (
-        descriptor.mobile_available
-        or auth.user_has_role(user, CourseBetaTesterRole(descriptor.id))
+    return (
+        auth.user_has_role(user, CourseBetaTesterRole(descriptor.id))
         or _has_staff_access_to_descriptor(user, descriptor, descriptor.id)
-    ) else MobileAvailabilityError()
+        or _is_descriptor_mobile_available(descriptor)
+    )
 
 
 def get_user_role(user, course_key):
