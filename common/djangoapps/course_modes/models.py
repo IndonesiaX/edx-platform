@@ -48,10 +48,19 @@ class CourseMode(models.Model):
     # the currency these prices are in, using lower case ISO currency codes
     currency = models.CharField(default="usd", max_length=8)
 
-    # turn this mode off after the given expiration date
-    expiration_date = models.DateField(default=None, null=True, blank=True)
+    # The datetime at which the course mode will expire.
+    # This is used to implement "upgrade" deadlines.
+    # For example, if there is a verified mode that expires on 1/1/2015,
+    # then users will be able to upgrade into the verified mode before that date.
+    # Once the date passes, users will no longer be able to enroll as verified.
+    expiration_datetime = models.DateTimeField(
+        default=None, null=True, blank=True,
+        verbose_name=_(u"Upgrade Deadline"),
+        help_text=_(u"After this date/time, users will no longer be able to enroll in this mode."),
+    )
 
-    expiration_datetime = models.DateTimeField(default=None, null=True, blank=True)
+    # DEPRECATED: the `expiration_date` field has been replaced by `expiration_datetime`
+    expiration_date = models.DateField(default=None, null=True, blank=True)
 
     # optional description override
     # WARNING: will not be localized

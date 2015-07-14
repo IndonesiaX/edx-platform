@@ -63,18 +63,33 @@ class CourseModeForm(forms.ModelForm):
 class CourseModeAdmin(admin.ModelAdmin):
     """Admin for course modes"""
     form = CourseModeForm
-    search_fields = ('course_id',)
-    list_display = (
-        'id', 'course_id', 'mode_slug', 'mode_display_name', 'min_price',
-        'currency', 'expiration_date', 'expiration_datetime_custom', 'sku'
+
+    fields = (
+        'course_id',
+        'mode_slug',
+        'mode_display_name',
+        'min_price',
+        'currency',
+        'expiration_datetime',
+        'sku'
     )
-    exclude = ('suggested_prices',)
+
+    search_fields = ('course_id',)
+
+    list_display = (
+        'id',
+        'course_id',
+        'mode_slug',
+        'min_price',
+        'expiration_datetime_custom',
+        'sku'
+    )
 
     def expiration_datetime_custom(self, obj):
         """adding custom column to show the expiry_datetime"""
         if obj.expiration_datetime:
             return get_time_display(obj.expiration_datetime, '%B %d, %Y, %H:%M  %p')
 
-    expiration_datetime_custom.short_description = "Expiration Datetime"
+    expiration_datetime_custom.short_description = "Upgrade Deadline"
 
 admin.site.register(CourseMode, CourseModeAdmin)
