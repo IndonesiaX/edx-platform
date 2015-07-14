@@ -132,6 +132,6 @@
          * SILENT: 4
          * Default is 0.
          */
-        logLevel: 0
+        logLevel: 1
     };
 } ())
