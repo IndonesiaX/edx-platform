@@ -13,7 +13,6 @@ Phase 1: Checks to see if an asset's metadata can be found in the course's modul
 
 from contracts import contract, new_contract
 from opaque_keys.edx.keys import AssetKey
-from xmodule.modulestore.django import modulestore
 from xmodule.contentstore.django import contentstore
 
 
