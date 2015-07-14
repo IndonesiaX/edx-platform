@@ -69,7 +69,7 @@ class CourseUserInfo(object):
     """
 
     def __init__(self):
-        self.is_course_staff = None
+        self.is_course_staff = None  # TODO: properly name (has_staff_access?)
 
     @staticmethod
     def load_from_course(user, course_key):
@@ -80,5 +80,4 @@ class CourseUserInfo(object):
         Returns:
             CourseUserInfo
         """
-        # TODO: should this process be made part of the transformation pipeline?
         return CourseUserInfo()  # TODO: write this

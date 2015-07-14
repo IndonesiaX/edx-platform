@@ -10,20 +10,16 @@ class CourseStructureTransformation(object):
     collected_data_class = namedtuple('EmptyTransformationData', '')
 
     @classmethod
-    def collect(cls, root_block, get_children, get_parents):
+    def collect(cls, course, get_children, get_parents):
         """
         Arguments:
-            root_block (XBlock)
+            course (CourseDescriptor)
             get_children (XBlock -> list[XBlock])
             get_parents (XBlock -> list[XBlock])
 
         Returns:
             dict[UsageKey: data_class]
         """
-        # TODO: should this take a root XBlock or a course?
-        # root XBlock would be more flexible, but this raises concerns about
-        # not all the data being percolated down from the top of the
-        # course hierarchy.
         pass
 
     @classmethod
@@ -43,10 +39,10 @@ class VisibilityTransformation(CourseStructureTransformation):
     collected_data_class = namedtuple('VisibilityTransformationData', 'visible_to_staff_only')
 
     @classmethod
-    def collect(cls, root_block, get_children, get_parents):
+    def collect(cls, course, get_children, get_parents):
         """
         Arguments:
-            root_block (XBlock)
+            course (CourseDescriptor)
             get_children (XBlock -> list[XBlock])
             get_parents (XBlock -> list[XBlock])
 
@@ -54,7 +50,7 @@ class VisibilityTransformation(CourseStructureTransformation):
             dict[UsageKey: data_class]
         """
         block_gen = generate_blocks_topological(
-            root_block, get_parents, get_children
+            course, get_parents, get_children
         )
         result_dict = {}
         for block in block_gen:
