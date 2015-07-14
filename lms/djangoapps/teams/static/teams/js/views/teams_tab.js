@@ -30,16 +30,23 @@
 
                var TeamTabView = Backbone.View.extend({
                    initialize: function(options) {
-                       var TempTabView, self = this;
+                       var TempTabView, router;
                        this.course_id = options.course_id;
                        this.topics = options.topics;
                        this.teams_url = options.teams_url;
-                       this.router = new (Backbone.Router.extend({
-                           routes: {
-                               'topics/:topic_id': _.bind(self.goToTopic, self),
-                               ':tab': _.bind(self.goToTab, self)
-                           }
-                       }))();
+                       // This slightly tedious approach is necessary
+                       // to use regular expressions within Backbone
+                       // routes, allowing us to capture which tab
+                       // name is being routed to
+                       router = this.router = new Backbone.Router();
+                       _.each([
+                           [':default', _.bind(this.routeNotFound, this)],
+                           ['topics/:topic_id', _.bind(this.goToTopic, this)],
+                           [new RegExp('^(browse)$'), _.bind(this.goToTab, this)],
+                           [new RegExp('^(teams)$'), _.bind(this.goToTab, this)]
+                       ], function (route) {
+                           router.route.apply(router, route);
+                       });
                        // TODO replace this with actual views!
                        TempTabView = Backbone.View.extend({
                            initialize: function (options) {
@@ -99,29 +106,35 @@
                                per_page: 5 // TODO determine the right number
                            }).bootstrap(),
                                topic = this.topicsCollection.findWhere({'id': topicID}),
-                               headerView = new HeaderView({
-                                   model: new HeaderModel({
-                                       description: _.escape(
-                                           interpolate(
-                                               gettext('Teams working on projects relating to %(topic)s'),
-                                               {topic: topic.get('name')},
-                                               true
-                                           )
-                                       ),
-                                       title: _.escape(topic.get('name')),
-                                       breadcrumbs: [{
-                                           title: 'All topics',
-                                           url: '#'
-                                       }]
-                                   }),
-                                   events: {
-                                       'click nav.breadcrumbs a.nav-item': function (event) {
-                                           event.preventDefault();
-                                           self.router.navigate('browse', {trigger: true});
-                                       }
-                                   }
+                               self = this,
+                               headerView;
+                           // The user tried to go to a topic that doesn't exist
+                           if (topic === undefined) {
+                               this.topicNotFound(topicID);
+                               return;
+                           }
+                           headerView = new HeaderView({
+                               model: new HeaderModel({
+                                   description: _.escape(
+                                       interpolate(
+                                           gettext('Teams working on projects relating to %(topic)s'),
+                                           {topic: topic.get('name')},
+                                           true
+                                       )
+                                   ),
+                                   title: _.escape(topic.get('name')),
+                                   breadcrumbs: [{
+                                       title: 'All topics',
+                                       url: '#'
+                                   }]
                                }),
-                               self = this;
+                               events: {
+                                   'click nav.breadcrumbs a.nav-item': function (event) {
+                                       event.preventDefault();
+                                       self.router.navigate('browse', {trigger: true});
+                                   }
+                               }
+                           });
                            teamCollection.goTo(1);
                            this.teamsView = new ViewWithHeader({
                                header: headerView,
@@ -142,6 +155,38 @@
                        // correctly.
                        this.render();
                        this.tabbedView.main.setActiveTab(tab);
+                   },
+
+                   // Error handling
+
+                   routeNotFound: function (route) {
+                       this.notFoundError(
+                           interpolate(
+                               gettext('The page %(route)s could not be found.'),
+                               {route: route},
+                               true
+                           )
+                       );
+                   },
+
+                   topicNotFound: function (topicID) {
+                       this.notFoundError(
+                           interpolate(
+                               gettext('The topic %(topic)s could not be found.'),
+                               {topic: topicID},
+                               true
+                           )
+                       );
+                   },
+
+                   /**
+                    * Called when the user attempts to navigate to a
+                    * route that doesn't exist. "Redirects" back to
+                    * the main teams tab, and adds an error message.
+                    */
+                   notFoundError: function (message) {
+                       this.router.navigate('teams', {trigger: true});
+                       this.$el.prepend($('<p class="error">' + message + '</p>')); // TODO needs styling of error message
                    }
                });
 
