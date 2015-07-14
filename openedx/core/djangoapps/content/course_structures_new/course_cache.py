@@ -1,10 +1,13 @@
+"""
+TODO
+"""
 
 from opaque_keys.edx.keys import CourseKey, UsageKey
 
 from xmodule.modulestore.django import modulestore
 
 from .course_cache_data import XBlockCacheEntry, XBlockInformation, CourseUserInfo
-from .transformations import TRANSFORMATIONS
+from .transformations import ALL_TRANSFORMATIONS
 
 
 def _load_block_tree(block, block_map, parent_map, child_map):
@@ -60,9 +63,9 @@ def _create_block_cache_entries(course):
     # computed data.
     required_fields = set()
     collected_data = {}
-    for transformation in TRANSFORMATIONS:
+    for transformation in ALL_TRANSFORMATIONS:
         required_fields |= transformation.required_fields
-        collected_data[transformation.__name__] = transformation.collect(course, get_children, get_parents)
+        collected_data[transformation.id] = transformation.collect(course, get_children, get_parents)
 
     # Build a dictionary mapping usage keys to block information.
     return {
@@ -74,8 +77,8 @@ def _create_block_cache_entries(course):
                 for required_field in required_fields
             },
             {
-                transformation_name: transformation_data[usage_key]
-                for transformation_name, transformation_data in collected_data.iteritems()
+                transformation_id: transformation_data[usage_key]
+                for transformation_id, transformation_data in collected_data.iteritems()
             }
         )
         for usage_key, block in block_map.iteritems()
@@ -106,7 +109,7 @@ def _load_user_blocks(user, course_key, root_block_key, block_cache_entries):
     """
     user_info = CourseUserInfo.load_from_course(user, course_key)
 
-    for transformation in TRANSFORMATIONS:
+    for transformation in ALL_TRANSFORMATIONS:
         transformation.apply(root_block_key, block_cache_entries, user_info)
     return {
         usage_key: XBlockInformation.from_cache_entry(cache_entry)

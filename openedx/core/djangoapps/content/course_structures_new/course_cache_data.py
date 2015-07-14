@@ -7,11 +7,11 @@ class XBlockCacheEntry(object):
             parent_keys (list[UsageKey])
             child_keys (list[UsageKey])
             block_fields (dict[str: *])
-            transformation_data (dict[str: C], where C = data_class of transformation type):
-                Dictionary containing data collected by each transformation.
+            transformation_data (dict[str: dict]):
+                Dictionary mapping transformations' IDs to their collected data.
                 {
-                    'VisibilityTransformation': VisibilityTransformation.data_class(...)
-                    'StartTransformation': StartTransformation.data_class(...)
+                    'builtin.visibility': { 'visible_to_staff_only': ... }
+                    'another_trans_id': { 'key1': value, 'key2': value2 ... }
                     ...
                 }
         """
@@ -20,21 +20,23 @@ class XBlockCacheEntry(object):
         self.block_fields = block_fields
         self._transformation_data = transformation_data
 
-    def get_transformation_data(self, transformation_class):
+    def get_transformation_data(self, transformation_id, key):
         """
         Arguments:
-            transformation_class (type): A subclass (the actual class; not an
-                instance of it) of CourseStructureTransformation.
+            transformation: Transformation
+            key: str
 
         Returns:
-            transformation_class.collected_data_class: An instance of the
-                transformation's collected data class containing the
+            *
         """
-        name = transformation_class.__name__
-        if name in self._transformation_data:
-            return self._transformation_data[name]
+        if transformation_id in self._transformation_data:
+            return self._transformation_data[transformation_id][key]
         else:
-            raise ValueError("Invalid transformation: {}".format(name))
+            raise KeyError(
+                "Data for transformation with ID {} not found.".format(
+                    transformation_id
+                )
+            )
 
 
 class XBlockInformation(object):
