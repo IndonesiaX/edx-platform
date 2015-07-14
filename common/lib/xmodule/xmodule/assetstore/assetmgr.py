@@ -34,13 +34,6 @@ class AssetMetadataNotFound(AssetException):
     pass
 
 
-# class AssetMetadataFoundTemporary(AssetException):
-#     """
-#     TEMPORARY: Thrown if asset metadata is actually found in the course modulestore.
-#     """
-#     pass
-
-
 class AssetManager(object):
     """
     Manager for saving/loading course assets.
@@ -51,13 +44,4 @@ class AssetManager(object):
         """
         Finds a course asset either in the assetstore -or- in the deprecated contentstore.
         """
-        #
-        # content_md = modulestore().find_asset_metadata(asset_key)
-        #
-        # # If found, raise an exception.
-        # if content_md:
-        #     # For now, no asset metadata should be found in the modulestore.
-        #     raise AssetMetadataFoundTemporary()
-        # else:
-        #     # If not found, load the asset via the contentstore.
         return contentstore().find(asset_key, throw_on_not_found, as_stream)
