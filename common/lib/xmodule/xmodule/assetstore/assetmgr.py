@@ -30,7 +30,7 @@ class AssetException(Exception):
 class AssetMetadataNotFound(AssetException):
     """
     Thrown when no asset metadata is present in the course modulestore for the particular asset requested.
-    """sudo chown -R mongodb:mongodb /edx/var/mongo/mongo/.
+    """
     pass
 
 
