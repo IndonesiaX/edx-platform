@@ -17,6 +17,18 @@ from util.date_utils import get_time_display
 from xmodule.modulestore.django import modulestore
 from course_modes.models import CourseMode
 
+# Technically, we shouldn't be doing this, since verify_student is defined
+# in LMS, and course_modes is defined in common.
+#
+# Once we move the responsibility for administering course modes into
+# the Course Admin tool, we can remove this dependency and expose
+# verification deadlines as a separate Django model admin.
+#
+# The admin page will work in both LMS and Studio,
+# but the test suite for Studio will fail because
+# the verification deadline table won't exist.
+from verify_student import models as verification_models
+
 
 class CourseModeForm(forms.ModelForm):
 
@@ -59,9 +71,8 @@ class CourseModeForm(forms.ModelForm):
 
         # Load the verification deadline
         # Since this is stored on a model in verify student, we need to load it from there.
-        if self.instance.course_id:
-            from verify_student.models import VerificationDeadline
-            deadline = VerificationDeadline.deadline_for_course(self.instance.course_id)
+        if self.instance.course_id and self.instance.mode_slug in CourseMode.VERIFIED_MODES:
+            deadline = verification_models.VerificationDeadline.deadline_for_course(self.instance.course_id)
             self.initial["verification_deadline"] = deadline
 
     def clean_course_id(self):
@@ -99,17 +110,29 @@ class CourseModeForm(forms.ModelForm):
         This is the place to perform checks that involve multiple form fields.
         """
         cleaned_data = super(CourseModeForm, self).clean()
-        verification_deadline = cleaned_data["verification_deadline"]
-        upgrade_deadline = cleaned_data["expiration_datetime"]
         mode_slug = cleaned_data["mode_slug"]
+        upgrade_deadline = cleaned_data["expiration_datetime"]
+        verification_deadline = cleaned_data["verification_deadline"]
+
+        # Allow upgrade deadlines ONLY for the "verified" mode
+        # This avoids a nasty error condition in which the upgrade deadline is set
+        # for a professional education course before the enrollment end date.
+        # When this happens, the course mode expires and students are able to enroll
+        # in the course for free.  To avoid this, we explicitly prevent admins from
+        # setting an upgrade deadline for any mode except "verified" (which has an upgrade path).
+        if upgrade_deadline is not None and mode_slug != CourseMode.VERIFIED:
+            raise forms.ValidationError(
+                'Only the "verified" mode can have an upgrade deadline.  '
+                'For other modes, please set the enrollment end date in Studio.'
+            )
 
         # Verification deadlines are allowed only for verified modes
         if verification_deadline is not None and mode_slug not in CourseMode.VERIFIED_MODES:
             raise forms.ValidationError("Verification deadline can be set only for verified modes.")
 
         # Verification deadline must be after the upgrade deadline
-        if verification_deadline is not None and upgrade_deadline is not None:
-            if verification_deadline < upgrade_deadline:
+        if verification_deadline is not None:
+            if upgrade_deadline is None or verification_deadline < upgrade_deadline:
                 raise forms.ValidationError("Verification deadline must be after the upgrade deadline.")
 
         return cleaned_data
@@ -126,8 +149,7 @@ class CourseModeForm(forms.ModelForm):
         # Note that verification deadline can be `None` here if
         # the deadline is being disabled.
         if course_key is not None:
-            from verify_student.models import VerificationDeadline
-            VerificationDeadline.set_deadline(course_key, verification_deadline)
+            verification_models.VerificationDeadline.set_deadline(course_key, verification_deadline)
 
         return super(CourseModeForm, self).save(commit=commit)
 
