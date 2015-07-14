@@ -32,7 +32,11 @@ class CourseModeForm(forms.ModelForm):
 
     mode_slug = forms.ChoiceField(choices=COURSE_MODE_SLUG_CHOICES, label=_("Mode"))
 
-    # TODO -- explain this
+    # The verification deadline is stored outside the course mode in the verify_student app.
+    # (we used to use the course mode expiration_datetime as both an upgrade and verification deadline).
+    # In order to make this transition easier, we include the verification deadline as a custom field
+    # in the course mode admin form.  Longer term, we will deprecate the course mode Django admin
+    # form in favor of an external Course Administration Tool.
     verification_deadline = forms.SplitDateTimeField(
         label=_("Verification Deadline"),
         required=False,
@@ -53,6 +57,8 @@ class CourseModeForm(forms.ModelForm):
             expiration_datetime = self.instance.expiration_datetime.replace(tzinfo=None)
             self.initial["expiration_datetime"] = default_tz.localize(expiration_datetime)
 
+        # Load the verification deadline
+        # Since this is stored on a model in verify student, we need to load it from there.
         if self.instance.course_id:
             from verify_student.models import VerificationDeadline
             deadline = VerificationDeadline.deadline_for_course(self.instance.course_id)
@@ -81,12 +87,17 @@ class CourseModeForm(forms.ModelForm):
             return self.cleaned_data.get("expiration_datetime").replace(tzinfo=UTC)
 
     def clean_verification_deadline(self):
-        """TODO """
+        """
+        Ensure that the verification deadline we save uses the UTC timezone.
+        """
         if self.cleaned_data.get("verification_deadline"):
             return self.cleaned_data.get("verification_deadline").replace(tzinfo=UTC)
 
     def clean(self):
-        """TODO """
+        """
+        Clean the form fields.
+        This is the place to perform checks that involve multiple form fields.
+        """
         cleaned_data = super(CourseModeForm, self).clean()
         verification_deadline = cleaned_data["verification_deadline"]
         upgrade_deadline = cleaned_data["expiration_datetime"]
@@ -104,9 +115,16 @@ class CourseModeForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
+        """
+        Save the form data.
+        """
         course_key = self.cleaned_data.get("course_id")
         verification_deadline = self.cleaned_data.get("verification_deadline")
 
+        # Since the verification deadline is stored in a separate model,
+        # we need to handle saving this ourselves.
+        # Note that verification deadline can be `None` here if
+        # the deadline is being disabled.
         if course_key is not None:
             from verify_student.models import VerificationDeadline
             VerificationDeadline.set_deadline(course_key, verification_deadline)
@@ -145,6 +163,8 @@ class CourseModeAdmin(admin.ModelAdmin):
         if obj.expiration_datetime:
             return get_time_display(obj.expiration_datetime, '%B %d, %Y, %H:%M  %p')
 
+    # Display a more user-friendly name for the custom expiration datetime field
+    # in the Django admin list view.
     expiration_datetime_custom.short_description = "Upgrade Deadline"
 
 admin.site.register(CourseMode, CourseModeAdmin)
