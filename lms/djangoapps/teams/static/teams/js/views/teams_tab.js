@@ -53,8 +53,8 @@
                                url: 'browse',
                                view: new TopicsView({
                                    collection: new TopicCollection(
-                                       options.topics,
-                                       {url: options.topics_url, course_id: options.course_id, parse: true}
+                                       this.topics,
+                                       {url: options.topics_url, course_id: this.course_id, parse: true}
                                    ).bootstrap(),
                                    router: router
                                })
