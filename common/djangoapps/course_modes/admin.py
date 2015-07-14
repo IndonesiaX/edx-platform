@@ -2,16 +2,19 @@
 Django admin page for course modes
 """
 from django.conf import settings
-from pytz import timezone, UTC
-from ratelimitbackend import admin
-from course_modes.models import CourseMode
 from django import forms
+from django.utils.translation import ugettext_lazy as _
 
-from opaque_keys import InvalidKeyError
-from xmodule.modulestore.django import modulestore
+from pytz import timezone, UTC
+
+from ratelimitbackend import admin
 from opaque_keys.edx.keys import CourseKey
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
+from opaque_keys import InvalidKeyError
+
 from util.date_utils import get_time_display
+from xmodule.modulestore.django import modulestore
+from course_modes.models import CourseMode
 
 
 class CourseModeForm(forms.ModelForm):
@@ -26,7 +29,16 @@ class CourseModeForm(forms.ModelForm):
         [(mode_slug, mode_slug) for mode_slug in CourseMode.CREDIT_MODES]
     )
 
-    mode_slug = forms.ChoiceField(choices=COURSE_MODE_SLUG_CHOICES)
+    mode_slug = forms.ChoiceField(choices=COURSE_MODE_SLUG_CHOICES, label=_("Mode"))
+
+    def __init__(self, *args, **kwargs):
+        super(CourseModeForm, self).__init__(*args, **kwargs)
+        if self.instance.expiration_datetime:
+            default_tz = timezone(settings.TIME_ZONE)
+            # django admin is using default timezone. To avoid time conversion from db to form
+            # convert the UTC object to naive and then localize with default timezone.
+            expiration_datetime = self.instance.expiration_datetime.replace(tzinfo=None)
+            self.initial['expiration_datetime'] = default_tz.localize(expiration_datetime)
 
     def clean_course_id(self):
         course_id = self.cleaned_data['course_id']
@@ -42,15 +54,6 @@ class CourseModeForm(forms.ModelForm):
             raise forms.ValidationError("Cannot find course with id {} in the modulestore".format(course_id))
 
         return course_key
-
-    def __init__(self, *args, **kwargs):
-        super(CourseModeForm, self).__init__(*args, **kwargs)
-        if self.instance.expiration_datetime:
-            default_tz = timezone(settings.TIME_ZONE)
-            # django admin is using default timezone. To avoid time conversion from db to form
-            # convert the UTC object to naive and then localize with default timezone.
-            expiration_datetime = self.instance.expiration_datetime.replace(tzinfo=None)
-            self.initial['expiration_datetime'] = default_tz.localize(expiration_datetime)
 
     def clean_expiration_datetime(self):
         """changing the tzinfo for a given datetime object"""

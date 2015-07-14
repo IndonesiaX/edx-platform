@@ -30,20 +30,20 @@ class CourseMode(models.Model):
 
     """
     # the course that this mode is attached to
-    course_id = CourseKeyField(max_length=255, db_index=True)
+    course_id = CourseKeyField(max_length=255, db_index=True, verbose_name=_("Course"))
 
     # the reference to this mode that can be used by Enrollments to generate
     # similar behavior for the same slug across courses
-    mode_slug = models.CharField(max_length=100)
+    mode_slug = models.CharField(max_length=100, verbose_name=_("Mode"))
 
     # The 'pretty' name that can be translated and displayed
-    mode_display_name = models.CharField(max_length=255)
+    mode_display_name = models.CharField(max_length=255, verbose_name=_("Display Name"))
 
-    # minimum price in USD that we would like to charge for this mode of the course
-    min_price = models.IntegerField(default=0)
-
-    # the suggested prices for this mode
-    suggested_prices = models.CommaSeparatedIntegerField(max_length=255, blank=True, default='')
+    # The price in USD that we would like to charge for this mode of the course
+    # Historical note: We used to allow users to choose from several prices, but later
+    # switched to using a single price.  Although this field is called `min_price`, it is
+    # really just the price of the course.
+    min_price = models.IntegerField(default=0, verbose_name=_("Price"))
 
     # the currency these prices are in, using lower case ISO currency codes
     currency = models.CharField(default="usd", max_length=8)
@@ -56,11 +56,19 @@ class CourseMode(models.Model):
     expiration_datetime = models.DateTimeField(
         default=None, null=True, blank=True,
         verbose_name=_(u"Upgrade Deadline"),
-        help_text=_(u"After this date/time, users will no longer be able to enroll in this mode."),
+        help_text=_(
+            u"OPTIONAL: After this date/time, users will no longer be able to enroll in this mode. "
+            u"Leave this blank if users can enroll in this mode until enrollment closes for the course."
+        ),
     )
 
     # DEPRECATED: the `expiration_date` field has been replaced by `expiration_datetime`
     expiration_date = models.DateField(default=None, null=True, blank=True)
+
+    # DEPRECATED: the suggested prices for this mode
+    # We used to allow users to choose from a set of prices, but we now allow only
+    # a single price.  This field has been deprecated by `min_price`
+    suggested_prices = models.CommaSeparatedIntegerField(max_length=255, blank=True, default='')
 
     # optional description override
     # WARNING: will not be localized
@@ -72,7 +80,10 @@ class CourseMode(models.Model):
         null=True,
         blank=True,
         verbose_name="SKU",
-        help_text="This is the SKU (stock keeping unit) of this mode in the external ecommerce service."
+        help_text=_(
+            u"OPTIONAL: This is the SKU (stock keeping unit) of this mode in the external ecommerce service.  "
+            u"Leave this blank if the course has not yet been migrated to the ecommerce service."
+        )
     )
 
     HONOR = 'honor'
