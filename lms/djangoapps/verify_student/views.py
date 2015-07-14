@@ -263,7 +263,7 @@ class PayAndVerifyView(View):
 
         # Retrieve the relevant course mode for the payment/verification flow.
         #
-        # NOTE: this is technical debt!  A much better way to do this would be to
+        # WARNING: this is technical debt!  A much better way to do this would be to
         # separate out the payment flow and use the product SKU to figure out what
         # the user is trying to purchase.
         #
@@ -479,13 +479,16 @@ class PayAndVerifyView(View):
 
     def _get_paid_mode(self, course_key):
         """
-        TODO
+        Retrieve the paid course mode for a course.
+
+        The returned course mode may or may not be expired.
+        Unexpired modes are preferred to expired modes.
 
         Arguments:
             course_key (CourseKey): The location of the course.
 
         Returns:
-            TODO
+            CourseMode tuple
 
         """
         # Retrieve all the modes at once to reduce the number of database queries

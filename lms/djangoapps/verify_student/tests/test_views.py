@@ -647,15 +647,10 @@ class TestPayAndVerifyView(UrlResetMixin, ModuleStoreTestCase):
             verification_deadline=verification_deadline,
         )
 
-        # Start the verification flow and expect that the verification deadline
-        # is displayed (not the upgrade deadline)
-        response = self._get_page("verify_student_start_flow", course.id)
-        data = self._get_page_data(response)
-
-        if verification_deadline is not None:
-            self.assertEqual(data["verification_deadline"], "Jan 02, 2999 at 00:00 UTC")
-        else:
-            self.assertEqual(data["verification_deadline"], "")
+        # Try to pay or upgrade.
+        # We should get a 404 because the upgrade deadline has passed
+        self._get_page("verify_student_start_flow", course.id, expected_status_code=404)
+        self._get_page("verify_student_upgrade_and_verify", course.id, expected_status_code=404)
 
         # Simulate paying for the course and enrolling
         self._enroll(course.id, "verified")
@@ -667,6 +662,12 @@ class TestPayAndVerifyView(UrlResetMixin, ModuleStoreTestCase):
 
         data = self._get_page_data(response)
         self.assertEqual(data['message_key'], PayAndVerifyView.VERIFY_NOW_MSG)
+
+        # Check that the verification deadline (rather than the upgrade deadline) is displayed
+        if verification_deadline is not None:
+            self.assertEqual(data["verification_deadline"], "Jan 02, 2999 at 00:00 UTC")
+        else:
+            self.assertEqual(data["verification_deadline"], "")
 
     def test_course_mode_not_expired_verification_deadline_passed(self):
         course = self._create_course("verified")
