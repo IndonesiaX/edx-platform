@@ -164,7 +164,8 @@ class TestInstructorDashboard(ModuleStoreTestCase, LoginEnrollmentTestCase):
         Test dashboard analytics tab isn't shwon if insights isn't configured.
         """
         response = self.client.get(self.url)
-        self.assertFalse('<h2>Analytics</h2>' in response.content)
+        analytics_section = '<li class="nav-item"><a href="" data-section="instructor_analytics">Analytics</a></li>'
+        self.assertFalse(analytics_section in response.content)
 
     @override_settings(ANALYTICS_DASHBOARD_URL='http://example.com')
     @override_settings(ANALYTICS_DASHBOARD_NAME='Example')
@@ -173,7 +174,8 @@ class TestInstructorDashboard(ModuleStoreTestCase, LoginEnrollmentTestCase):
         Test analytics dashboard message is shown
         """
         response = self.client.get(self.url)
-        self.assertTrue('<h2>Analytics</h2>' in response.content)
+        analytics_section = '<li class="nav-item"><a href="" data-section="instructor_analytics">Analytics</a></li>'
+        self.assertTrue(analytics_section in response.content)
 
         # link to dashboard shown
         expected_message = self.get_dashboard_analytics_message()
