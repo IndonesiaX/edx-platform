@@ -4,6 +4,7 @@ Django admin page for course modes
 from django.conf import settings
 from django import forms
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.admin import widgets
 
 from pytz import timezone, UTC
 
@@ -30,6 +31,17 @@ class CourseModeForm(forms.ModelForm):
     )
 
     mode_slug = forms.ChoiceField(choices=COURSE_MODE_SLUG_CHOICES, label=_("Mode"))
+
+    # TODO -- explain this
+    verification_deadline = forms.SplitDateTimeField(
+        label=_("Verification Deadline"),
+        required=False,
+        help_text=_(
+            "OPTIONAL: After this date/time, users will no longer be able to submit photos for verification.  "
+            "This appies ONLY to modes that require verification."
+        ),
+        widget=widgets.AdminSplitDateTime,
+    )
 
     def __init__(self, *args, **kwargs):
         super(CourseModeForm, self).__init__(*args, **kwargs)
@@ -62,6 +74,28 @@ class CourseModeForm(forms.ModelForm):
         if self.cleaned_data.get("expiration_datetime"):
             return self.cleaned_data.get("expiration_datetime").replace(tzinfo=UTC)
 
+    def clean_verification_deadline(self):
+        """TODO """
+        if self.cleaned_data.get("verification_deadline"):
+            return self.cleaned_data.get("verification_deadline").replace(tzinfo=UTC)
+
+    def clean(self):
+        """TODO """
+        cleaned_data = super(CourseModeForm, self).clean()
+        verification_deadline = cleaned_data["verification_deadline"]
+        upgrade_deadline = cleaned_data["expiration_datetime"]
+        mode_slug = cleaned_data["mode_slug"]
+
+        # Verification deadlines are allowed only for verified modes
+        if verification_deadline is not None and mode_slug not in CourseMode.VERIFIED_MODES:
+            raise forms.ValidationError("Verification deadline can be set only for verified modes.")
+
+        # Verification deadline must be after the upgrade deadline
+        if verification_deadline < upgrade_deadline:
+            raise forms.ValidationError("Verification deadline must be after the upgrade deadline.")
+
+        return cleaned_data
+
 
 class CourseModeAdmin(admin.ModelAdmin):
     """Admin for course modes"""
@@ -74,6 +108,7 @@ class CourseModeAdmin(admin.ModelAdmin):
         'min_price',
         'currency',
         'expiration_datetime',
+        'verification_deadline',
         'sku'
     )
 
