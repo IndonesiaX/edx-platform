@@ -45,12 +45,18 @@ class CourseModeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(CourseModeForm, self).__init__(*args, **kwargs)
+
         if self.instance.expiration_datetime:
             default_tz = timezone(settings.TIME_ZONE)
             # django admin is using default timezone. To avoid time conversion from db to form
             # convert the UTC object to naive and then localize with default timezone.
             expiration_datetime = self.instance.expiration_datetime.replace(tzinfo=None)
-            self.initial['expiration_datetime'] = default_tz.localize(expiration_datetime)
+            self.initial["expiration_datetime"] = default_tz.localize(expiration_datetime)
+
+        if self.instance.course_id:
+            from verify_student.models import VerificationDeadline
+            deadline = VerificationDeadline.deadline_for_course(self.instance.course_id)
+            self.initial["verification_deadline"] = deadline
 
     def clean_course_id(self):
         course_id = self.cleaned_data['course_id']
@@ -91,10 +97,21 @@ class CourseModeForm(forms.ModelForm):
             raise forms.ValidationError("Verification deadline can be set only for verified modes.")
 
         # Verification deadline must be after the upgrade deadline
-        if verification_deadline < upgrade_deadline:
-            raise forms.ValidationError("Verification deadline must be after the upgrade deadline.")
+        if verification_deadline is not None and upgrade_deadline is not None:
+            if verification_deadline < upgrade_deadline:
+                raise forms.ValidationError("Verification deadline must be after the upgrade deadline.")
 
         return cleaned_data
+
+    def save(self, commit=True):
+        course_key = self.cleaned_data.get("course_id")
+        verification_deadline = self.cleaned_data.get("verification_deadline")
+
+        if course_key is not None:
+            from verify_student.models import VerificationDeadline
+            VerificationDeadline.set_deadline(course_key, verification_deadline)
+
+        return super(CourseModeForm, self).save(commit=commit)
 
 
 class CourseModeAdmin(admin.ModelAdmin):
