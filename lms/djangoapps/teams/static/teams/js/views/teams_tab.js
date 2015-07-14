@@ -74,7 +74,6 @@
                     * Render the list of teams for the given topic ID.
                     */
                    goToTopic: function (topicID) {
-                       console.log('TODO: render topic page for ' + topicID + ' and setElement to this el.');
                        if (this.teamsView === undefined) {
                            var teamCollection = new TeamCollection([], {
                                course_id: this.course_id,
