@@ -313,7 +313,7 @@ class TeamsListView(ExpandableFieldViewMixin, GenericAPIView):
 
         page = self.paginate_queryset(queryset)
         serializer = self.get_pagination_serializer(page)
-        serializer.context.update({'sort_order': order_by_input})
+        serializer.context.update({'sort_order': order_by_input})  # pylint: disable=maybe-no-member
         return Response(serializer.data)  # pylint: disable=maybe-no-member
 
     def post(self, request):
