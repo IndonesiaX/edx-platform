@@ -74,7 +74,9 @@
                     * Render the list of teams for the given topic ID.
                     */
                    goToTopic: function (topicID) {
-                       if (this.teamsView === undefined) {
+                       // Lazily load the teams-for-topic view in
+                       // order to avoid making an extra AJAX call.
+                       if (this.teamsView === undefined || this.teamsView.topic_id !== topicID) {
                            var teamCollection = new TeamCollection([], {
                                course_id: this.course_id,
                                url: this.teams_url,
