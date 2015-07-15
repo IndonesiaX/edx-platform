@@ -13,6 +13,7 @@ Phase 1: Checks to see if an asset's metadata can be found in the course's modul
 
 from contracts import contract, new_contract
 from opaque_keys.edx.keys import AssetKey
+from xmodule.modulestore.django import modulestore
 from xmodule.contentstore.django import contentstore
 
 
@@ -33,6 +34,13 @@ class AssetMetadataNotFound(AssetException):
     pass
 
 
+class AssetMetadataFoundTemporary(AssetException):
+    """
+    TEMPORARY: Thrown if asset metadata is actually found in the course modulestore.
+    """
+    pass
+
+
 class AssetManager(object):
     """
     Manager for saving/loading course assets.
@@ -41,6 +49,6 @@ class AssetManager(object):
     @contract(asset_key='AssetKey', throw_on_not_found='bool', as_stream='bool')
     def find(asset_key, throw_on_not_found=True, as_stream=False):
         """
-        Finds a course asset either in the contentstore.
+        Finds a course asset either in the deprecated contentstore.
         """
         return contentstore().find(asset_key, throw_on_not_found, as_stream)
