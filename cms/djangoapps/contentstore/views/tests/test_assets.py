@@ -12,7 +12,6 @@ from django.conf import settings
 from contentstore.tests.utils import CourseTestCase
 from contentstore.views import assets
 from contentstore.utils import reverse_course_url
-from xmodule.assetstore.assetmgr import AssetMetadataFoundTemporary
 from xmodule.assetstore import AssetMetadata
 from xmodule.contentstore.content import StaticContent
 from xmodule.contentstore.django import contentstore
