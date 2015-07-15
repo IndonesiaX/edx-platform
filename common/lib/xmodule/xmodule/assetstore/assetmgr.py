@@ -41,6 +41,6 @@ class AssetManager(object):
     @contract(asset_key='AssetKey', throw_on_not_found='bool', as_stream='bool')
     def find(asset_key, throw_on_not_found=True, as_stream=False):
         """
-        Finds a course asset either in the assetstore -or- in the deprecated contentstore.
+        Finds a course asset either in the contentstore.
         """
         return contentstore().find(asset_key, throw_on_not_found, as_stream)
