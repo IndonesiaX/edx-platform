@@ -30,6 +30,7 @@ from django.core.urlresolvers import reverse
                   social_network: 'LinkedIn'
               };
               Logger.log('edx.certificate.shared', data);
+              window.open('${linked_in_url}');
           });
       });
 
@@ -85,7 +86,7 @@ from django.core.urlresolvers import reverse
                     %endif
 
                     %if linked_in_url:
-                    <button class="action action-linkedin-profile btn btn-overlay btn-small icon-only" id="action-share-linkedin" onclick="window.open('${linked_in_url}');" title="${_('Add to LinkedIn Profile')}" data-course-id="${course_id}" data-certificate-mode="${course_mode}">
+                    <button class="action action-linkedin-profile btn btn-overlay btn-small icon-only" id="action-share-linkedin" title="${_('Add to LinkedIn Profile')}" data-course-id="${course_id}" data-certificate-mode="${course_mode}">
                         <i class="icon fa fa-linkedin" aria-hidden="true"></i>
                         <span class="action-label">${_("Add to LinkedIn Profile")}</span>
                     </button>
