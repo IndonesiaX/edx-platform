@@ -73,6 +73,7 @@ TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
 @XBlock.needs("i18n")
 @XBlock.needs("fs")
 @XBlock.needs("user")
+@XBlock.needs("bookmarks")
 class PureXBlock(XBlock):
     """
     Pure XBlock to use in tests.
@@ -1103,7 +1104,7 @@ class TestHtmlModifiers(ModuleStoreTestCase):
         result_fragment = module.render(STUDENT_VIEW)
 
         self.assertIn(
-            '/c4x/{org}/{course}/asset/_file.jpg'.format(
+            '/c4x/{org}/{course}/asset/file.jpg'.format(
                 org=self.course.location.org,
                 course=self.course.location.course,
             ),
@@ -1151,7 +1152,7 @@ class TestHtmlModifiers(ModuleStoreTestCase):
 
     def test_get_course_info_section(self):
         self.course.static_asset_path = "toy_course_dir"
-        get_course_info_section(self.request, self.course, "handouts")
+        get_course_info_section(self.request, self.request.user, self.course, "handouts")
         # NOTE: check handouts output...right now test course seems to have no such content
         # at least this makes sure get_course_info_section returns without exception
 
@@ -1232,6 +1233,7 @@ class ViewInStudioTest(ModuleStoreTestCase):
         self.request.user = self.staff_user
         self.request.session = {}
         self.module = None
+        self.default_context = {'bookmarked': False, 'username': self.user.username}
 
     def _get_module(self, course_id, descriptor, location):
         """
@@ -1290,14 +1292,14 @@ class MongoViewInStudioTest(ViewInStudioTest):
     def test_view_in_studio_link_studio_course(self):
         """Regular Studio courses should see 'View in Studio' links."""
         self.setup_mongo_course()
-        result_fragment = self.module.render(STUDENT_VIEW)
+        result_fragment = self.module.render(STUDENT_VIEW, context=self.default_context)
         self.assertIn('View Unit in Studio', result_fragment.content)
 
     def test_view_in_studio_link_only_in_top_level_vertical(self):
         """Regular Studio courses should not see 'View in Studio' for child verticals of verticals."""
         self.setup_mongo_course()
         # Render the parent vertical, then check that there is only a single "View Unit in Studio" link.
-        result_fragment = self.module.render(STUDENT_VIEW)
+        result_fragment = self.module.render(STUDENT_VIEW, context=self.default_context)
         # The single "View Unit in Studio" link should appear before the first xmodule vertical definition.
         parts = result_fragment.content.split('data-block-type="vertical"')
         self.assertEqual(3, len(parts), "Did not find two vertical blocks")
@@ -1308,7 +1310,7 @@ class MongoViewInStudioTest(ViewInStudioTest):
     def test_view_in_studio_link_xml_authored(self):
         """Courses that change 'course_edit_method' setting can hide 'View in Studio' links."""
         self.setup_mongo_course(course_edit_method='XML')
-        result_fragment = self.module.render(STUDENT_VIEW)
+        result_fragment = self.module.render(STUDENT_VIEW, context=self.default_context)
         self.assertNotIn('View Unit in Studio', result_fragment.content)
 
 
@@ -1321,19 +1323,19 @@ class MixedViewInStudioTest(ViewInStudioTest):
     def test_view_in_studio_link_mongo_backed(self):
         """Mixed mongo courses that are mongo backed should see 'View in Studio' links."""
         self.setup_mongo_course()
-        result_fragment = self.module.render(STUDENT_VIEW)
+        result_fragment = self.module.render(STUDENT_VIEW, context=self.default_context)
         self.assertIn('View Unit in Studio', result_fragment.content)
 
     def test_view_in_studio_link_xml_authored(self):
         """Courses that change 'course_edit_method' setting can hide 'View in Studio' links."""
         self.setup_mongo_course(course_edit_method='XML')
-        result_fragment = self.module.render(STUDENT_VIEW)
+        result_fragment = self.module.render(STUDENT_VIEW, context=self.default_context)
         self.assertNotIn('View Unit in Studio', result_fragment.content)
 
     def test_view_in_studio_link_xml_backed(self):
         """Course in XML only modulestore should not see 'View in Studio' links."""
         self.setup_xml_course()
-        result_fragment = self.module.render(STUDENT_VIEW)
+        result_fragment = self.module.render(STUDENT_VIEW, context=self.default_context)
         self.assertNotIn('View Unit in Studio', result_fragment.content)
 
 
@@ -1349,9 +1351,22 @@ class XmlViewInStudioTest(ViewInStudioTest):
         self.assertNotIn('View Unit in Studio', result_fragment.content)
 
 
+@XBlock.tag("detached")
+class DetachedXBlock(XBlock):
+    """
+    XBlock marked with the 'detached' flag.
+    """
+    def student_view(self, context=None):  # pylint: disable=unused-argument
+        """
+        A simple view that returns just enough to test.
+        """
+        frag = Fragment(u"Hello there!")
+        return frag
+
+
 @attr('shard_1')
 @patch.dict('django.conf.settings.FEATURES', {'DISPLAY_DEBUG_INFO_TO_STAFF': True, 'DISPLAY_HISTOGRAMS_TO_STAFF': True})
-@patch('courseware.module_render.has_access', Mock(return_value=True))
+@patch('courseware.module_render.has_access', Mock(return_value=True, autospec=True))
 class TestStaffDebugInfo(ModuleStoreTestCase):
     """Tests to verify that Staff Debug Info panel and histograms are displayed to staff."""
 
@@ -1403,6 +1418,28 @@ class TestStaffDebugInfo(ModuleStoreTestCase):
         )
         result_fragment = module.render(STUDENT_VIEW)
         self.assertIn('Staff Debug', result_fragment.content)
+
+    @XBlock.register_temp_plugin(DetachedXBlock, identifier='detached-block')
+    def test_staff_debug_info_disabled_for_detached_blocks(self):
+        """Staff markup should not be present on detached blocks."""
+
+        descriptor = ItemFactory.create(
+            category='detached-block',
+            display_name='Detached Block'
+        )
+        field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
+            self.course.id,
+            self.user,
+            descriptor
+        )
+        module = render.get_module(
+            self.user,
+            self.request,
+            descriptor.location,
+            field_data_cache,
+        )
+        result_fragment = module.render(STUDENT_VIEW)
+        self.assertNotIn('Staff Debug', result_fragment.content)
 
     @patch.dict('django.conf.settings.FEATURES', {'DISPLAY_HISTOGRAMS_TO_STAFF': False})
     def test_histogram_disabled(self):
@@ -1483,7 +1520,7 @@ class TestAnonymousStudentId(ModuleStoreTestCase, LoginEnrollmentTestCase):
         self.course_key = ToyCourseFactory.create().id
         self.course = modulestore().get_course(self.course_key)
 
-    @patch('courseware.module_render.has_access', Mock(return_value=True))
+    @patch('courseware.module_render.has_access', Mock(return_value=True, autospec=True))
     def _get_anonymous_id(self, course_id, xblock_class):
         location = course_id.make_usage_key('dummy_category', 'dummy_name')
         descriptor = Mock(
@@ -1550,7 +1587,7 @@ class TestAnonymousStudentId(ModuleStoreTestCase, LoginEnrollmentTestCase):
 
 
 @attr('shard_1')
-@patch('track.views.tracker')
+@patch('track.views.tracker', autospec=True)
 class TestModuleTrackingContext(ModuleStoreTestCase):
     """
     Ensure correct tracking information is included in events emitted during XBlock callback handling.
@@ -1638,8 +1675,8 @@ class TestXmoduleRuntimeEvent(TestSubmittingProblems):
         super(TestXmoduleRuntimeEvent, self).setUp()
         self.homework = self.add_graded_section_to_course('homework')
         self.problem = self.add_dropdown_to_section(self.homework.location, 'p1', 1)
-        self.grade_dict = {'value': 0.18, 'max_value': 32, 'user_id': self.student_user.id}
-        self.delete_dict = {'value': None, 'max_value': None, 'user_id': self.student_user.id}
+        self.grade_dict = {'value': 0.18, 'max_value': 32}
+        self.delete_dict = {'value': None, 'max_value': None}
 
     def get_module_for_user(self, user):
         """Helper function to get useful module at self.location in self.course_id for user"""
@@ -1826,7 +1863,7 @@ class LMSXBlockServiceBindingTest(ModuleStoreTestCase):
         self.request_token = Mock()
 
     @XBlock.register_temp_plugin(PureXBlock, identifier='pure')
-    @ddt.data("user", "i18n", "fs", "field-data")
+    @ddt.data("user", "i18n", "fs", "field-data", "bookmarks")
     def test_expected_services_exist(self, expected_service):
         """
         Tests that the 'user', 'i18n', and 'fs' services are provided by the LMS runtime.
@@ -2055,13 +2092,13 @@ class TestDisabledXBlockTypes(ModuleStoreTestCase):
         super(TestDisabledXBlockTypes, self).setUp()
 
         for store in self.store.modulestores:
-            store.disabled_xblock_types = ('combinedopenended', 'peergrading', 'video')
+            store.disabled_xblock_types = ('video',)
 
     @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
     def test_get_item(self, default_ms):
         with self.store.default_store(default_ms):
             course = CourseFactory()
-            for block_type in ('peergrading', 'combinedopenended', 'video'):
+            for block_type in ('video',):
                 item = ItemFactory(category=block_type, parent=course)
                 item = self.store.get_item(item.scope_ids.usage_id)
                 self.assertEqual(item.__class__.__name__, 'RawDescriptorWithMixins')

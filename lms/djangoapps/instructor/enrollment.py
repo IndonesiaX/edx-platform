@@ -111,7 +111,16 @@ def enroll_email(course_id, student_email, auto_enroll=False, email_students=Fal
     if previous_state.user:
         # if the student is currently unenrolled, don't enroll them in their
         # previous mode
-        course_mode = CourseMode.DEFAULT_MODE_SLUG
+
+        # for now, White Labels use 'shoppingcart' which is based on the
+        # "honor" course_mode. Given the change to use "audit" as the default
+        # course_mode in Open edX, we need to be backwards compatible with
+        # how White Labels approach enrollment modes.
+        if CourseMode.is_white_label(course_id):
+            course_mode = CourseMode.DEFAULT_SHOPPINGCART_MODE_SLUG
+        else:
+            course_mode = None
+
         if previous_state.enrollment:
             course_mode = previous_state.mode
 
@@ -272,7 +281,7 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
 
     protocol = 'https' if secure else 'http'
     course_key = course_key or course.id.to_deprecated_string()
-    display_name = display_name or course.display_name_with_default
+    display_name = display_name or course.display_name_with_default_escaped
 
     stripped_site_name = microsite.get_value(
         'SITE_NAME',

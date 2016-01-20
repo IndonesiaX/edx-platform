@@ -62,8 +62,6 @@ FEATURES['ENABLE_SERVICE_STATUS'] = True
 
 FEATURES['ENABLE_HINTER_INSTRUCTOR_VIEW'] = True
 
-FEATURES['ENABLE_INSTRUCTOR_LEGACY_DASHBOARD'] = True
-
 FEATURES['ENABLE_SHOPPING_CART'] = True
 
 FEATURES['ENABLE_VERIFIED_CERTIFICATES'] = True
@@ -354,6 +352,7 @@ MKTG_URL_LINK_MAP = {
     'PRESS': 'press',
     'BLOG': 'blog',
     'DONATE': 'donate',
+    'SITEMAP.XML': 'sitemap_xml',
 
     # Verified Certificates
     'WHAT_IS_VERIFIED_CERT': 'verified-certificate',
@@ -424,6 +423,8 @@ PLATFORM_NAME = "edX"
 SITE_NAME = "edx.org"
 
 # set up some testing for microsites
+FEATURES['USE_MICROSITES'] = True
+MICROSITE_ROOT_DIR = COMMON_ROOT / 'test' / 'test_microsites'
 MICROSITE_CONFIGURATION = {
     "test_microsite": {
         "domain_prefix": "testmicrosite",
@@ -448,6 +449,11 @@ MICROSITE_CONFIGURATION = {
         "ENABLE_SHOPPING_CART": True,
         "ENABLE_PAID_COURSE_REGISTRATION": True,
         "SESSION_COOKIE_DOMAIN": "test_microsite.localhost",
+        "urls": {
+            'ABOUT': 'testmicrosite/about',
+            'PRIVACY': 'testmicrosite/privacy',
+            'TOS_AND_HONOR': 'testmicrosite/tos-and-honor',
+        },
     },
     "microsite_with_logistration": {
         "domain_prefix": "logistration",
@@ -479,15 +485,14 @@ MICROSITE_CONFIGURATION = {
         "domain_prefix": "www",
     }
 }
-MICROSITE_ROOT_DIR = COMMON_ROOT / 'test' / 'test_microsites'
+
 MICROSITE_TEST_HOSTNAME = 'testmicrosite.testserver'
 MICROSITE_LOGISTRATION_HOSTNAME = 'logistration.testserver'
 
-FEATURES['USE_MICROSITES'] = True
-
 # add extra template directory for test-only templates
 MAKO_TEMPLATES['main'].extend([
-    COMMON_ROOT / 'test' / 'templates'
+    COMMON_ROOT / 'test' / 'templates',
+    COMMON_ROOT / 'test' / 'test_microsites'
 ])
 
 
@@ -515,9 +520,6 @@ FEATURES['ENABLE_EDXNOTES'] = True
 
 # Enable teams feature for tests.
 FEATURES['ENABLE_TEAMS'] = True
-
-# Add apps to Installed apps for testing
-INSTALLED_APPS += ('openedx.core.djangoapps.call_stack_manager',)
 
 # Enable courseware search for tests
 FEATURES['ENABLE_COURSEWARE_SEARCH'] = True

@@ -47,6 +47,7 @@ from xmodule_django.models import CourseKeyField, NoneToEmptyManager
 
 from certificates.models import GeneratedCertificate
 from course_modes.models import CourseMode
+from enrollment.api import _default_course_mode
 import lms.lib.comment_client as cc
 from openedx.core.djangoapps.commerce.utils import ecommerce_api_client, ECOMMERCE_DATE_FORMAT
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
@@ -503,7 +504,28 @@ class Registration(models.Model):
 
     def activate(self):
         self.user.is_active = True
+        self._track_activation()
         self.user.save()
+
+    def _track_activation(self):
+        """ Update the isActive flag in mailchimp for activated users."""
+        has_segment_key = getattr(settings, 'LMS_SEGMENT_KEY', None)
+        has_mailchimp_id = hasattr(settings, 'MAILCHIMP_NEW_USER_LIST_ID')
+        if has_segment_key and has_mailchimp_id:
+            identity_args = [
+                self.user.id,  # pylint: disable=no-member
+                {
+                    'email': self.user.email,
+                    'username': self.user.username,
+                    'activated': 1,
+                },
+                {
+                    "MailChimp": {
+                        "listId": settings.MAILCHIMP_NEW_USER_LIST_ID
+                    }
+                }
+            ]
+            analytics.identify(*identity_args)
 
 
 class PendingNameChange(models.Model):
@@ -1090,7 +1112,7 @@ class CourseEnrollment(models.Model):
                 )
 
     @classmethod
-    def enroll(cls, user, course_key, mode=CourseMode.DEFAULT_MODE_SLUG, check_access=False):
+    def enroll(cls, user, course_key, mode=None, check_access=False):
         """
         Enroll a user in a course. This saves immediately.
 
@@ -1124,6 +1146,8 @@ class CourseEnrollment(models.Model):
 
         Also emits relevant events for analytics purposes.
         """
+        if mode is None:
+            mode = _default_course_mode(unicode(course_key))
         # All the server-side checks for whether a user is allowed to enroll.
         try:
             course = CourseOverview.get_from_id(course_key)
@@ -1165,7 +1189,7 @@ class CourseEnrollment(models.Model):
         return enrollment
 
     @classmethod
-    def enroll_by_email(cls, email, course_id, mode=CourseMode.DEFAULT_MODE_SLUG, ignore_errors=True):
+    def enroll_by_email(cls, email, course_id, mode=None, ignore_errors=True):
         """
         Enroll a user in a course given their email. This saves immediately.
 
@@ -1486,7 +1510,7 @@ class ManualEnrollmentAudit(models.Model):
         """
         saves the student manual enrollment information
         """
-        cls.objects.create(
+        return cls.objects.create(
             enrolled_by=user,
             enrolled_email=email,
             state_transition=state_transition,

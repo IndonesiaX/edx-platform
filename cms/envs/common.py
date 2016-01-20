@@ -180,6 +180,8 @@ FEATURES = {
 
     # Special Exams, aka Timed and Proctored Exams
     'ENABLE_SPECIAL_EXAMS': False,
+
+    'ORGANIZATIONS_APP': False,
 }
 
 ENABLE_JASMINE = False
@@ -527,6 +529,12 @@ PIPELINE_CSS = {
         ],
         'output_filename': 'css/studio-main-rtl.css',
     },
+    'style-edx-icons': {
+        'source_filenames': [
+            'css/edx-icons.css',
+        ],
+        'output_filename': 'css/edx-icons.css',
+    },
     'style-xmodule-annotations': {
         'source_filenames': [
             'css/vendor/ova/annotator.css',
@@ -801,6 +809,9 @@ INSTALLED_APPS = (
     # edX Proctoring
     'edx_proctoring',
 
+    # Bookmarks
+    'openedx.core.djangoapps.bookmarks',
+
     # programs support
     'openedx.core.djangoapps.programs',
 
@@ -816,6 +827,10 @@ INSTALLED_APPS = (
     # other apps that are.  Django 1.8 wants to have imported models supported
     # by installed apps.
     'lms.djangoapps.verify_student',
+
+    # Microsite configuration application
+    'microsite_configuration',
+
 )
 
 
@@ -924,6 +939,9 @@ OPTIONAL_APPS = (
 
     # milestones
     'milestones',
+
+    # Organizations App (http://github.com/edx/edx-organizations)
+    'organizations',
 )
 
 
@@ -992,7 +1010,6 @@ ADVANCED_COMPONENT_TYPES = [
     'videoannotation',  # module for annotating video (with annotation table)
     'imageannotation',  # module for annotating image (with annotation table)
     'word_cloud',
-    'graphical_slider_tool',
     'lti',
     'lti_consumer',
     'library_content',
@@ -1001,6 +1018,8 @@ ADVANCED_COMPONENT_TYPES = [
     'pb-dashboard',
     'poll',
     'survey',
+    'activetable',
+    'vectordraw',
     # Some of the XBlocks from pmitros repos are sometimes prototypes.
     # Use with caution.
     'concept',  # Concept mapper. See https://github.com/pmitros/ConceptXBlock
@@ -1011,8 +1030,6 @@ ADVANCED_COMPONENT_TYPES = [
     'rate',  # Allows up-down voting of course content. See https://github.com/pmitros/RateXBlock
 
     'split_test',
-    'combinedopenended',
-    'peergrading',
     'notes',
     'schoolyourself_review',
     'schoolyourself_lesson',
@@ -1110,7 +1127,26 @@ CREDIT_PROVIDER_TIMESTAMP_EXPIRATION = 15 * 60
 
 ################################ Deprecated Blocks Info ################################
 
-DEPRECATED_BLOCK_TYPES = ['peergrading', 'combinedopenended']
+DEPRECATED_BLOCK_TYPES = [
+    'peergrading',
+    'combinedopenended',
+    'graphical_slider_tool',
+]
+
+
+################################ Settings for Microsites ################################
+
+### Select an implementation for the microsite backend
+# for MICROSITE_BACKEND possible choices are
+# 1. microsite_configuration.backends.filebased.FilebasedMicrositeBackend
+# 2. microsite_configuration.backends.database.DatabaseMicrositeBackend
+MICROSITE_BACKEND = 'microsite_configuration.backends.filebased.FilebasedMicrositeBackend'
+# for MICROSITE_TEMPLATE_BACKEND possible choices are
+# 1. microsite_configuration.backends.filebased.FilebasedMicrositeTemplateBackend
+# 2. microsite_configuration.backends.database.DatabaseMicrositeTemplateBackend
+MICROSITE_TEMPLATE_BACKEND = 'microsite_configuration.backends.filebased.FilebasedMicrositeTemplateBackend'
+# TTL for microsite database template cache
+MICROSITE_DATABASE_TEMPLATE_CACHE_TTL = 5 * 60
 
 #### PROCTORING CONFIGURATION DEFAULTS
 
@@ -1125,3 +1161,6 @@ PROCTORING_SETTINGS = {}
 
 # OpenID Connect issuer ID. Normally the URL of the authentication endpoint.
 OAUTH_OIDC_ISSUER = 'https://www.example.com/oauth2'
+
+# 5 minute expiration time for JWT id tokens issued for external API requests.
+OAUTH_ID_TOKEN_EXPIRATION = 5 * 60

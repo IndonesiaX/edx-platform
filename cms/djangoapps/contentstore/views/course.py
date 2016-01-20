@@ -17,6 +17,7 @@ import django.utils
 from django.utils.translation import ugettext as _
 from django.views.decorators.http import require_http_methods, require_GET
 from django.views.decorators.csrf import ensure_csrf_cookie
+
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 from opaque_keys.edx.locations import Location
@@ -83,6 +84,11 @@ from util.milestones_helpers import (
     is_prerequisite_courses_enabled,
     is_valid_course_key,
     set_prerequisite_courses,
+)
+from util.organizations_helpers import (
+    add_organization_course,
+    get_organization_by_short_name,
+    organizations_enabled,
 )
 from util.string_utils import _has_non_ascii_characters
 from xmodule.contentstore.content import StaticContent
@@ -340,6 +346,39 @@ def _course_outline_json(request, course_module):
     )
 
 
+def get_in_process_course_actions(request):
+    """
+     Get all in-process course actions
+    """
+    return [
+        course for course in
+        CourseRerunState.objects.find_all(
+            exclude_args={'state': CourseRerunUIStateManager.State.SUCCEEDED}, should_display=True
+        )
+        if has_studio_read_access(request.user, course.course_key)
+    ]
+
+
+def _staff_accessible_course_list(request):
+    """
+    List all courses available to the logged in user by iterating through all the courses
+    """
+    def course_filter(course_summary):
+        """
+        Filter out unusable and inaccessible courses
+        """
+        # pylint: disable=fixme
+        # TODO remove this condition when templates purged from db
+        if course_summary.location.course == 'templates':
+            return False
+
+        return has_studio_read_access(request.user, course_summary.id)
+
+    courses_summary = filter(course_filter, modulestore().get_course_summaries())
+    in_process_course_actions = get_in_process_course_actions(request)
+    return courses_summary, in_process_course_actions
+
+
 def _accessible_courses_list(request):
     """
     List all courses available to the logged in user by iterating through all the courses
@@ -359,13 +398,8 @@ def _accessible_courses_list(request):
         return has_studio_read_access(request.user, course.id)
 
     courses = filter(course_filter, modulestore().get_courses())
-    in_process_course_actions = [
-        course for course in
-        CourseRerunState.objects.find_all(
-            exclude_args={'state': CourseRerunUIStateManager.State.SUCCEEDED}, should_display=True
-        )
-        if has_studio_read_access(request.user, course.course_key)
-    ]
+
+    in_process_course_actions = get_in_process_course_actions(request)
     return courses, in_process_course_actions
 
 
@@ -588,7 +622,7 @@ def get_courses_accessible_to_user(request):
     """
     if GlobalStaff().has_user(request.user):
         # user has global access so no need to get courses from django groups
-        courses, in_process_course_actions = _accessible_courses_list(request)
+        courses, in_process_course_actions = _staff_accessible_course_list(request)
     else:
         try:
             courses, in_process_course_actions = _accessible_courses_list_from_groups(request)
@@ -621,9 +655,9 @@ def _remove_in_process_courses(courses, in_process_course_actions):
 
     in_process_action_course_keys = [uca.course_key for uca in in_process_course_actions]
     courses = [
-        format_course_for_view(c)
-        for c in courses
-        if not isinstance(c, ErrorDescriptor) and (c.id not in in_process_action_course_keys)
+        format_course_for_view(course)
+        for course in courses
+        if not isinstance(course, ErrorDescriptor) and (course.id not in in_process_action_course_keys)
     ]
     return courses
 
@@ -738,8 +772,17 @@ def _create_new_course(request, org, number, run, fields):
     Returns the URL for the course overview page.
     Raises DuplicateCourseError if the course already exists
     """
+    org_data = get_organization_by_short_name(org)
+    if not org_data and organizations_enabled():
+        return JsonResponse(
+            {'error': _('You must link this course to an organization in order to continue. '
+                        'Organization you selected does not exist in the system, '
+                        'you will need to add it to the system')},
+            status=400
+        )
     store_for_new_course = modulestore().default_modulestore.get_modulestore_type()
     new_course = create_new_course_in_store(store_for_new_course, request.user, org, number, run, fields)
+    add_organization_course(org_data, new_course.id)
     return JsonResponse({
         'url': reverse_course_url('course_handler', new_course.id),
         'course_key': unicode(new_course.id),
